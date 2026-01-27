@@ -1,0 +1,143 @@
+"""
+Configuration file for data fetchers
+=====================================
+
+Add your API keys here.
+
+API Key Sources:
+- FRED: https://fred.stlouisfed.org/docs/api/api_key.html (free)
+- Tinkoff: https://www.tinkoff.ru/invest/open-api/ (requires account)
+- Cbonds: https://cbonds.ru/api/ (paid, demo available)
+"""
+
+import os
+from pathlib import Path
+
+# =============================================================================
+# PROJECT PATHS
+# =============================================================================
+
+PROJECT_ROOT = Path(__file__).parent
+DATA_DIR = PROJECT_ROOT / "data"
+RAW_DATA_DIR = DATA_DIR / "raw"
+PROCESSED_DATA_DIR = DATA_DIR / "processed"
+MANUAL_DATA_DIR = DATA_DIR / "manual"
+DB_PATH = PROJECT_ROOT / "bond_rates_database.db"
+
+# Create directories if they don't exist
+for dir_path in [DATA_DIR, RAW_DATA_DIR, PROCESSED_DATA_DIR, MANUAL_DATA_DIR]:
+    dir_path.mkdir(parents=True, exist_ok=True)
+
+# =============================================================================
+# API KEYS
+# =============================================================================
+
+# Environment variables take precedence over hardcoded values
+API_KEYS = {
+    # FRED API (free, recommended)
+    # Get key at: https://fred.stlouisfed.org/docs/api/api_key.html
+    'fred': os.environ.get('4a0ec1a8f56de2d4d3f2b4c2311ff596', None),
+    
+    # Tinkoff Invest API (requires brokerage account)
+    'tinkoff': os.environ.get('TINKOFF_API_KEY', None),
+    
+    # BCS API (requires brokerage account)  
+    'bcs': os.environ.get('BCS_API_KEY', None),
+    
+    # Cbonds API (paid service, 7-day demo available)
+    'cbonds': os.environ.get('CBONDS_API_KEY', None),
+}
+
+# =============================================================================
+# DATA SETTINGS
+# =============================================================================
+
+# Default date range for data fetching
+DEFAULT_START_DATE = "2015-01-01"
+
+# Request timeout in seconds
+REQUEST_TIMEOUT = 60
+
+# Rate limiting (seconds between requests)
+RATE_LIMIT_DELAY = 0.1
+
+# =============================================================================
+# OFZ BENCHMARK BONDS
+# =============================================================================
+
+# Updated list of OFZ benchmark bonds by maturity
+# These are commonly used bonds for yield curve construction
+OFZ_BENCHMARKS = {
+    "1Y": ["SU26222RMFS6", "SU26227RMFS5", "SU26234RMFS1"],
+    "2Y": ["SU26229RMFS1", "SU26233RMFS3"],
+    "3Y": ["SU26232RMFS5", "SU26230RMFS9", "SU26226RMFS7"],
+    "5Y": ["SU26235RMFS9", "SU26236RMFS7", "SU26225RMFS9"],
+    "7Y": ["SU26237RMFS5", "SU26221RMFS8"],
+    "10Y": ["SU26238RMFS3", "SU26240RMFS9", "SU26241RMFS7", "SU26228RMFS3"],
+    "15Y": ["SU26239RMFS1", "SU26230RMFS9"],
+}
+
+# =============================================================================
+# FRED SERIES
+# =============================================================================
+
+FRED_SERIES_RUSSIA = {
+    "RUSCPIALLMINMEI": "Russia CPI (Monthly)",
+    "RUSCCUSMA02STM": "Russia Consumer Confidence",
+    "LRUNTTTTRUM156S": "Russia Unemployment Rate",
+    "EXRUUS": "Russia / U.S. Foreign Exchange Rate",
+}
+
+FRED_SERIES_CHINA = {
+    "CHNCPIALLMINMEI": "China CPI (Monthly)",
+    "CHNPROINDMISMEI": "China Production Index",
+    "IRLTLT01CNM156N": "China Long-Term Interest Rate",
+    "DEXCHUS": "USD/CNY Exchange Rate",
+}
+
+FRED_SERIES_GLOBAL = {
+    "DGS10": "US 10-Year Treasury Yield",
+    "DGS2": "US 2-Year Treasury Yield",
+    "FEDFUNDS": "Federal Funds Rate",
+    "DCOILBRENTEU": "Brent Crude Oil Price",
+    "GOLDAMGBD228NLBM": "Gold Price",
+}
+
+# =============================================================================
+# CBR CURRENCY CODES
+# =============================================================================
+
+CBR_CURRENCY_CODES = {
+    "USD": "R01235",
+    "EUR": "R01239",
+    "CNY": "R01375",
+    "GBP": "R01035",
+    "JPY": "R01820",
+}
+
+# =============================================================================
+# DATABASE TABLES
+# =============================================================================
+
+DB_TABLES = {
+    'russian_bond_yields': 'Russian OFZ yields by maturity (monthly)',
+    'chinese_bond_yields': 'Chinese government bond yields (monthly)',
+    'russian_macro': 'Russian macroeconomic indicators (monthly)',
+    'chinese_macro': 'Chinese macroeconomic indicators (monthly)',
+    'cbr_key_rate': 'CBR key interest rate (monthly)',
+    'cbr_gcurve': 'CBR G-Curve parameters (monthly)',
+    'currency_rates': 'Currency exchange rates (monthly)',
+    'pboc_lpr': 'PBOC Loan Prime Rate (monthly)',
+    'global_indicators': 'Global economic indicators (monthly)',
+}
+
+# =============================================================================
+# SCHEDULER SETTINGS
+# =============================================================================
+
+# Update schedule (cron-like)
+SCHEDULE = {
+    'daily_update': '0 9 * * *',  # Every day at 9 AM
+    'monthly_full_update': '0 10 1 * *',  # 1st of each month at 10 AM
+}
+
