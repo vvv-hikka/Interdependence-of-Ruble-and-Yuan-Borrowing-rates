@@ -25,6 +25,10 @@ matplotlib>=3.7.0
 # Machine learning (for analysis)
 scikit-learn>=1.2.0
 
+# Statistical analysis
+statsmodels>=0.14.0
+scipy>=1.10.0
+
 # Excel support
 openpyxl>=3.1.0
 xlrd>=2.0.0

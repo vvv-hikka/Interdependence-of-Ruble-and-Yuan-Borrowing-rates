@@ -1,4 +1,4 @@
-﻿"""
+"""
 IMF Fetcher - International Monetary Fund Data
 ==============================================
 Source: https://data.imf.org/
@@ -7,6 +7,7 @@ Automation: Full (REST API)
 Cost: Free
 """
 
+import time
 import requests
 import pandas as pd
 from datetime import datetime
@@ -42,11 +43,32 @@ class IMFFetcher:
         'FM2_XDC': 'Broad Money (M2)',
         'EREER_IX': 'Real Effective Exchange Rate',
         'BFXW_BP6_USD': 'International Reserves',
+        # Business activity indicators
+        'IP_IX': 'Industrial Production Index',
+        'XGS_BP6_USD': 'Exports of Goods and Services',
+        'MGS_BP6_USD': 'Imports of Goods and Services',
+        'BCA_BP6_USD': 'Current Account Balance',
     }
     
-    def __init__(self, timeout: int = 60):
+    def __init__(self, timeout: int = 120):
         self.timeout = timeout
         self.session = requests.Session()
+    
+    def _get_with_retry(self, url: str, params: dict = None, max_retries: int = 2):
+        """GET with retries on timeout/connection errors. Returns response or raises."""
+        params = params or {}
+        last_exc = None
+        for attempt in range(max_retries + 1):
+            try:
+                response = self.session.get(url, params=params, timeout=self.timeout)
+                return response
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                last_exc = e
+                if attempt < max_retries:
+                    time.sleep(2 ** (attempt + 1))
+        if last_exc:
+            raise last_exc
+        return response
     
     # =========================================================================
     # IFS DATA
@@ -79,7 +101,7 @@ class IMFFetcher:
         }
         
         try:
-            response = self.session.get(url, params=params, timeout=self.timeout)
+            response = self._get_with_retry(url, params)
             response.raise_for_status()
             data = response.json()
             
@@ -250,6 +272,59 @@ class IMFFetcher:
         return result.sort_values('date') if result is not None else pd.DataFrame()
     
     # =========================================================================
+    # BUSINESS ACTIVITY DATA
+    # =========================================================================
+    
+    def fetch_business_activity_ifs(self, country_code: str, start_year: int = 2000) -> pd.DataFrame:
+        """
+        Fetch business activity indicators from IMF IFS.
+        
+        Includes industrial production, trade data for both countries.
+        
+        Args:
+            country_code: Country code ('RUS' or 'CHN')
+            start_year: Start year for data
+        
+        Returns:
+            DataFrame with business activity indicators
+        """
+        print(f"\nFetching business activity data from IMF IFS for {country_code}...")
+        
+        # Business activity series codes
+        business_series = [
+            'IP_IX',  # Industrial Production Index
+            'XGS_BP6_USD',  # Exports of Goods and Services
+            'MGS_BP6_USD',  # Imports of Goods and Services
+            'BCA_BP6_USD',  # Current Account Balance
+        ]
+        
+        data = {}
+        for code in business_series:
+            description = self.IFS_SERIES.get(code, code)
+            print(f"  Fetching {description}...")
+            df = self.fetch_ifs_series(country_code, code, 'M', start_year)
+            if not df.empty:
+                prefix = 'RU' if country_code == 'RUS' else 'CN'
+                df = df.rename(columns={'value': f'{prefix}_{code}'})
+                data[code] = df
+                print(f"    [OK] {len(df)} records")
+            else:
+                print(f"    [ERROR] No data")
+        
+        # Combine all series
+        if not data:
+            return pd.DataFrame()
+        
+        result = None
+        for df in data.values():
+            if result is None:
+                result = df
+            else:
+                result = result.merge(df, on='date', how='outer')
+        
+        return result.sort_values('date') if result is not None else pd.DataFrame()
+    
+    # =========================================================================
     # WEO DATA (Annual)
     # =========================================================================
     
@@ -262,7 +337,7 @@ class IMFFetcher:
         url = f"{self.BASE_URL}/CompactData/WEO/A.{country_code}.{indicator_code}"
         
         try:
-            response = self.session.get(url, timeout=self.timeout)
+            response = self._get_with_retry(url)
             response.raise_for_status()
             data = response.json()
             

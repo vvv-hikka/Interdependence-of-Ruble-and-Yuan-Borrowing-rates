@@ -4,6 +4,7 @@ from .moex import MOEXFetcher
 from .cbr import CBRFetcher
 from .fred import FREDFetcher
 from .imf import IMFFetcher
+from .bis import BISFetcher
 
-__all__ = ['AKShareFetcher', 'MOEXFetcher', 'CBRFetcher', 'FREDFetcher', 'IMFFetcher']
+__all__ = ['AKShareFetcher', 'MOEXFetcher', 'CBRFetcher', 'FREDFetcher', 'IMFFetcher', 'BISFetcher']
 

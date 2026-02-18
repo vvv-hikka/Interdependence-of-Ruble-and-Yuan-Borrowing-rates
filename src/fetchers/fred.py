@@ -1,4 +1,4 @@
-﻿"""
+"""
 FRED Fetcher - Federal Reserve Economic Data
 =============================================
 Source: https://fred.stlouisfed.org/
@@ -9,11 +9,17 @@ Cost: Free (API key required)
 Get API key: https://fred.stlouisfed.org/docs/api/api_key.html
 """
 
+import time
 import requests
 import pandas as pd
 from datetime import datetime
 from typing import Optional, Dict, List
 from io import StringIO
+
+try:
+    from config import FRED_OPTIONAL_SERIES
+except ImportError:
+    FRED_OPTIONAL_SERIES = frozenset()
 
 
 class FREDFetcher:
@@ -22,17 +28,14 @@ class FREDFetcher:
     BASE_URL = "https://api.stlouisfed.org/fred"
     CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
     
-    # Useful series for Russia/China analysis
     SERIES_RUSSIA = {
         "RUSCPIALLMINMEI": "Russia CPI (Monthly)",
-        # Note: Many Russian series were discontinued after 2022
-        # These are the currently available series
+        "RUSPROINDMISMEI": "Russia Industrial Production Index",
     }
     
     SERIES_CHINA = {
         "CHNCPIALLMINMEI": "China CPI (Monthly)",
         "DEXCHUS": "USD/CNY Exchange Rate",
-        # Note: Some series may be discontinued or renamed
     }
     
     SERIES_GLOBAL = {
@@ -41,7 +44,8 @@ class FREDFetcher:
         "FEDFUNDS": "Federal Funds Rate",
         "DCOILBRENTEU": "Brent Crude Oil Price",
         "DTWEXBGS": "Trade Weighted USD Index",
-        # Note: Gold price series GOLDAMGBD228NLBM was discontinued
+        "IPMAN": "US Industrial Production: Manufacturing",
+        "UMCSENT": "US Consumer Sentiment",
     }
     
     def __init__(self, api_key: str = None, timeout: int = 30):
@@ -60,6 +64,24 @@ class FREDFetcher:
         """Set or update API key."""
         self.api_key = api_key
     
+    def _get_with_retry(self, url: str, params: dict, max_retries: int = 3):
+        """GET with retries on 502 and connection errors. Returns response or raises."""
+        last_exc = None
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(url, params=params, timeout=self.timeout)
+                if response.status_code == 502 and attempt < max_retries - 1:
+                    time.sleep(2 ** (attempt + 1))
+                    continue
+                return response
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                last_exc = e
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** (attempt + 1))
+        if last_exc:
+            raise last_exc
+        return response
+    
     # =========================================================================
     # CSV DOWNLOAD (No API key required)
     # =========================================================================
@@ -69,14 +91,7 @@ class FREDFetcher:
                          end_date: str = None) -> pd.DataFrame:
         """
         Fetch series data via CSV download (no API key needed).
-        
-        Args:
-            series_id: FRED series ID
-            start_date: Start date (YYYY-MM-DD)
-            end_date: End date (YYYY-MM-DD)
-        
-        Returns:
-            DataFrame with date and value columns
+        Retries on 502/connection errors. Returns empty DataFrame on 404 (series not found).
         """
         params = {"id": series_id}
         
@@ -86,7 +101,10 @@ class FREDFetcher:
             params["coed"] = end_date
         
         try:
-            response = self.session.get(self.CSV_URL, params=params, timeout=self.timeout)
+            response = self._get_with_retry(self.CSV_URL, params)
+            if response.status_code == 404:
+                print(f"  [SKIP] {series_id} not found (404)")
+                return pd.DataFrame()
             response.raise_for_status()
             
             df = pd.read_csv(StringIO(response.text))
@@ -101,6 +119,11 @@ class FREDFetcher:
                 if not df.empty:
                     return df
             
+        except requests.exceptions.HTTPError as e:
+            if e.response is not None and e.response.status_code == 404:
+                print(f"  [SKIP] {series_id} not found (404)")
+            else:
+                print(f"  [ERROR] Error fetching {series_id}: {e}")
         except Exception as e:
             print(f"  [ERROR] Error fetching {series_id}: {e}")
         
@@ -145,7 +168,7 @@ class FREDFetcher:
             params["frequency"] = frequency
         
         try:
-            response = self.session.get(url, params=params, timeout=self.timeout)
+            response = self._get_with_retry(url, params)
             response.raise_for_status()
             data = response.json()
             
@@ -200,7 +223,8 @@ class FREDFetcher:
                 data[series_id] = df
                 print(f"    [OK] {len(df)} records")
             else:
-                print(f"    [ERROR] No data")
+                msg = "    [SKIP] No data" if series_id in FRED_OPTIONAL_SERIES else "    [ERROR] No data"
+                print(msg)
         
         return data
     
@@ -247,7 +271,8 @@ class FREDFetcher:
                 data[series_id] = df
                 print(f"    [OK] {len(df)} records")
             else:
-                print(f"    [ERROR] No data")
+                msg = "    [SKIP] No data" if series_id in FRED_OPTIONAL_SERIES else "    [ERROR] No data"
+                print(msg)
         
         return data
     
@@ -318,6 +343,43 @@ class FREDFetcher:
             result = result.sort_values('date')
         
         return result
+    
+    # =========================================================================
+    # BUSINESS ACTIVITY DATA
+    # =========================================================================
+    
+    def fetch_business_activity_combined(self, start_date: str = None,
+                                         end_date: str = None) -> pd.DataFrame:
+        """
+        Fetch business activity indicators from FRED.
+        Only series that are known to be available (no discontinued ones).
+        """
+        print("\nFetching business activity indicators from FRED...")
+        
+        series = {
+            "RUSPROINDMISMEI": ("Russia Industrial Production", "RU_RUSPROINDMISMEI"),
+            "IPMAN": ("US Industrial Production: Manufacturing", "IPMAN"),
+            "UMCSENT": ("US Consumer Sentiment", "UMCSENT"),
+        }
+        
+        all_data = []
+        for series_id, (description, col_name) in series.items():
+            print(f"  Fetching {description}...")
+            df = self.fetch_series(series_id, start_date, end_date)
+            if not df.empty:
+                df = df.rename(columns={'value': col_name})
+                all_data.append(df)
+                print(f"    [OK] {len(df)} records")
+        
+        if not all_data:
+            return pd.DataFrame()
+        
+        result = all_data[0]
+        for df in all_data[1:]:
+            result = result.merge(df, on='date', how='outer')
+        
+        result = result.sort_values('date')
+        return self.resample_to_monthly(result)
     
     # =========================================================================
     # RESAMPLE TO MONTHLY

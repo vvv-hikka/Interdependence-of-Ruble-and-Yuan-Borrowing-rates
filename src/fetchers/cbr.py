@@ -1,4 +1,4 @@
-﻿"""
+"""
 CBR Fetcher - Bank of Russia data
 =================================
 Source: https://www.cbr.ru/
@@ -309,47 +309,63 @@ class CBRFetcher:
         date_col = combined.columns[0]
         
         try:
-            combined['date'] = pd.to_datetime(combined[date_col], dayfirst=True, errors='coerce')
+            if date_col != 'date':
+                if 'date' in combined.columns:
+                    combined = combined.drop(columns=['date'])
+                combined = combined.rename(columns={date_col: 'date'})
+            
+            combined['date'] = pd.to_datetime(combined['date'], dayfirst=True, errors='coerce')
             combined = combined.dropna(subset=['date'])
+            if combined.empty:
+                print("  [WARN] No valid dates after parsing, using embedded G-Curve")
+                return self._get_embedded_gcurve()
+            
+            # Convert all non-date columns to numeric
+            for col in combined.columns:
+                if col != 'date':
+                    combined[col] = pd.to_numeric(
+                        combined[col].astype(str).str.replace(',', '.'), errors='coerce'
+                    )
+            
             combined = combined.set_index('date')
+            numeric_cols = list(combined.select_dtypes(include=['number']).columns)
+            if not numeric_cols:
+                print("  [WARN] No numeric columns in G-Curve data, using embedded")
+                return self._get_embedded_gcurve()
             
-            # Get numeric columns (yield values for different maturities)
-            numeric_cols = combined.select_dtypes(include=['number']).columns
-            
-            # Resample to monthly (last value)
             monthly = combined[numeric_cols].resample('ME').last().reset_index()
             
-            # Rename columns to standard format
-            new_cols = {'date': 'date'}
+            # Map column names to standard maturities
+            maturity_map = {
+                '0.25': 'RU_3M', '0.5': 'RU_6M',
+                '1': 'RU_1Y', '2': 'RU_2Y', '3': 'RU_3Y',
+                '5': 'RU_5Y', '7': 'RU_7Y', '10': 'RU_10Y',
+                '15': 'RU_15Y', '20': 'RU_20Y', '30': 'RU_30Y',
+            }
+            new_cols = {}
             for col in monthly.columns:
                 if col == 'date':
                     continue
-                # Try to extract maturity from column name
-                col_str = str(col)
-                if '0.25' in col_str or '3м' in col_str.lower():
-                    new_cols[col] = 'RU_3M'
-                elif '0.5' in col_str or '6м' in col_str.lower():
-                    new_cols[col] = 'RU_6M'
-                elif '1.00' in col_str or '1' == col_str or '1год' in col_str.lower():
-                    new_cols[col] = 'RU_1Y'
-                elif '2.00' in col_str or '2' == col_str:
-                    new_cols[col] = 'RU_2Y'
-                elif '3.00' in col_str or '3' == col_str:
-                    new_cols[col] = 'RU_3Y'
-                elif '5.00' in col_str or '5' == col_str:
-                    new_cols[col] = 'RU_5Y'
-                elif '7.00' in col_str or '7' == col_str:
-                    new_cols[col] = 'RU_7Y'
-                elif '10.00' in col_str or '10' == col_str:
-                    new_cols[col] = 'RU_10Y'
-                elif '15.00' in col_str or '15' == col_str:
-                    new_cols[col] = 'RU_15Y'
-                elif '20.00' in col_str or '20' == col_str:
-                    new_cols[col] = 'RU_20Y'
-                elif '30.00' in col_str or '30' == col_str:
-                    new_cols[col] = 'RU_30Y'
+                col_str = str(col).strip()
+                matched = False
+                for pattern, target in maturity_map.items():
+                    if pattern == col_str or f'{pattern}.00' == col_str or f'{pattern}.0' == col_str:
+                        new_cols[col] = target
+                        matched = True
+                        break
+                if not matched:
+                    clean = col_str.replace(',', '.').strip()
+                    for pattern, target in maturity_map.items():
+                        if clean == pattern or clean == f'{pattern}.00' or clean == f'{pattern}.0':
+                            new_cols[col] = target
+                            break
             
-            monthly = monthly.rename(columns=new_cols)
+            if new_cols:
+                monthly = monthly.rename(columns=new_cols)
+            
+            # Keep only recognized columns
+            keep = ['date'] + [c for c in monthly.columns if c.startswith('RU_')]
+            monthly = monthly[[c for c in keep if c in monthly.columns]]
             
             print(f"  [OK] Monthly G-Curve: {len(monthly)} months")
             return monthly
@@ -541,6 +557,42 @@ class CBRFetcher:
         print("-"*60)
         
         return data
+    
+    # =========================================================================
+    # BUSINESS ACTIVITY INDICATORS
+    # =========================================================================
+    
+    def fetch_russia_industrial_production(self) -> pd.DataFrame:
+        """
+        Fetch Russian industrial production data.
+        
+        Note: CBR may not provide this directly. This is a placeholder
+        that could be extended to fetch from Rosstat or other sources.
+        
+        Returns:
+            DataFrame with industrial production data (empty if not available)
+        """
+        print("\nFetching Russian industrial production...")
+        print("  [INFO] Industrial production data typically comes from Rosstat")
+        print("  [INFO] CBR may provide some business activity indicators")
+        print("  [INFO] Consider using FRED or IMF for this data")
+        
+        # Placeholder - in production, this could scrape Rosstat or use their API
+        return pd.DataFrame()
+    
+    def fetch_russia_business_confidence(self) -> pd.DataFrame:
+        """
+        Fetch Russian business confidence/sentiment indicators.
+        
+        Returns:
+            DataFrame with business confidence data (empty if not available)
+        """
+        print("\nFetching Russian business confidence...")
+        print("  [INFO] Business confidence data may come from surveys")
+        print("  [INFO] Consider using FRED series RUSCCUSMA02STM")
+        
+        # Placeholder - in production, this could fetch from CBR surveys or other sources
+        return pd.DataFrame()
 
 
 # Test function

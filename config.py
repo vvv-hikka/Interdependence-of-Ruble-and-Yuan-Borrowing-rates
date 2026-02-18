@@ -22,7 +22,6 @@ DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 MANUAL_DATA_DIR = DATA_DIR / "manual"
-DB_PATH = PROJECT_ROOT / "bond_rates_database.db"
 
 # Create directories if they don't exist
 for dir_path in [DATA_DIR, RAW_DATA_DIR, PROCESSED_DATA_DIR, MANUAL_DATA_DIR]:
@@ -80,18 +79,19 @@ OFZ_BENCHMARKS = {
 # =============================================================================
 # FRED SERIES
 # =============================================================================
+# Discontinued FRED series (kept for reference, not fetched)
+# RUSCCUSMA02STM: Russia Consumer Confidence — 404 since ~2023
+# CHNPROINDMISMEI: China Industrial Production — 404 since ~2023
+# GOLDAMGBD228NLBM: Gold Price — discontinued
+FRED_OPTIONAL_SERIES = set()
 
 FRED_SERIES_RUSSIA = {
     "RUSCPIALLMINMEI": "Russia CPI (Monthly)",
-    "RUSCCUSMA02STM": "Russia Consumer Confidence",
-    "LRUNTTTTRUM156S": "Russia Unemployment Rate",
-    "EXRUUS": "Russia / U.S. Foreign Exchange Rate",
+    "RUSPROINDMISMEI": "Russia Industrial Production Index",
 }
 
 FRED_SERIES_CHINA = {
     "CHNCPIALLMINMEI": "China CPI (Monthly)",
-    "CHNPROINDMISMEI": "China Production Index",
-    "IRLTLT01CNM156N": "China Long-Term Interest Rate",
     "DEXCHUS": "USD/CNY Exchange Rate",
 }
 
@@ -100,7 +100,15 @@ FRED_SERIES_GLOBAL = {
     "DGS2": "US 2-Year Treasury Yield",
     "FEDFUNDS": "Federal Funds Rate",
     "DCOILBRENTEU": "Brent Crude Oil Price",
-    "GOLDAMGBD228NLBM": "Gold Price",
+    "DTWEXBGS": "Trade Weighted USD Index",
+    "IPMAN": "US Industrial Production: Manufacturing",
+    "UMCSENT": "US Consumer Sentiment",
+}
+
+FRED_SERIES_BUSINESS_ACTIVITY = {
+    "RUSPROINDMISMEI": "Russia Industrial Production",
+    "IPMAN": "US Industrial Production: Manufacturing",
+    "UMCSENT": "US Consumer Sentiment",
 }
 
 # =============================================================================
@@ -116,8 +124,10 @@ CBR_CURRENCY_CODES = {
 }
 
 # =============================================================================
-# DATABASE TABLES
+# DATABASE CONFIGURATION
 # =============================================================================
+
+DB_PATH = PROJECT_ROOT / "bond_rates_database.db"
 
 DB_TABLES = {
     'russian_bond_yields': 'Russian OFZ yields by maturity (monthly)',
@@ -129,7 +139,19 @@ DB_TABLES = {
     'currency_rates': 'Currency exchange rates (monthly)',
     'pboc_lpr': 'PBOC Loan Prime Rate (monthly)',
     'global_indicators': 'Global economic indicators (monthly)',
+    'business_activity': 'Business activity indicators (monthly)',
 }
+
+# Base tables only (exclude derived views like combined_monthly)
+BASE_TABLES_FOR_COMBINED_VIEW = [
+    'cbr_key_rate', 'cbr_gcurve', 'currency_rates', 'russian_bond_yields',
+    'russian_macro', 'pboc_lpr', 'chinese_bond_yields', 'chinese_macro',
+    'global_indicators', 'business_activity',
+]
+
+# Canonical variable prefixes for analysis (combined view columns are {table}_{col})
+# Use these to select columns from combined_monthly when variables is not specified
+ANALYSIS_VARIABLE_PREFIXES = list(BASE_TABLES_FOR_COMBINED_VIEW)
 
 # =============================================================================
 # SCHEDULER SETTINGS
