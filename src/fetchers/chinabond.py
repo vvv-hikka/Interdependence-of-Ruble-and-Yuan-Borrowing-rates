@@ -31,7 +31,7 @@ class ChinaBondLoader:
         if data_dir:
             self.data_dir = Path(data_dir)
         else:
-            self.data_dir = Path(__file__).parent.parent.parent / "data" / "manual"
+            self.data_dir = Path(__file__).parent.parent / "data_manual"
         
         self.data_dir.mkdir(parents=True, exist_ok=True)
     
