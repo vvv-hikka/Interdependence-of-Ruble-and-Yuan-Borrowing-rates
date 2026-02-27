@@ -35,7 +35,7 @@ for dir_path in [DATA_DIR, RAW_DATA_DIR, PROCESSED_DATA_DIR, MANUAL_DATA_DIR]:
 API_KEYS = {
     # FRED API (free, recommended)
     # Get key at: https://fred.stlouisfed.org/docs/api/api_key.html
-    'fred': os.environ.get('4a0ec1a8f56de2d4d3f2b4c2311ff596', None),
+    'fred': os.environ.get('FRED_API_KEY', None),
     
     # Tinkoff Invest API (requires brokerage account)
     'tinkoff': os.environ.get('TINKOFF_API_KEY', None),
@@ -141,6 +141,10 @@ DB_TABLES = {
     'global_indicators': 'Global economic indicators (monthly)',
     'business_activity': 'Business activity indicators (monthly)',
 }
+
+# Table prefixes for FRED-sourced data in combined_monthly
+# Use these to explicitly restrict analysis to FRED-backed series
+FRED_TABLE_PREFIXES = ['russian_macro', 'chinese_macro', 'global_indicators', 'business_activity']
 
 # Base tables only (exclude derived views like combined_monthly)
 BASE_TABLES_FOR_COMBINED_VIEW = [

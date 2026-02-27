@@ -10,7 +10,7 @@ Per-table expected date range and main source. Use this to avoid analyzing perio
 | **russian_bond_yields** | 2019–present (monthly) | MOEX / CBR |
 | **russian_macro** | 2015–2022-03 (partial; CPI, industrial prod) | FRED |
 | **pboc_lpr** | 2019–present | AKShare |
-| **chinese_bond_yields** | Limited (e.g. 2020–2021 from AKShare); extend via manual ChinaBond file | AKShare, ChinaBond manual |
+| **chinese_bond_yields** | Limited (e.g. 2020–2021 from AKShare); extend via manual ChinaBond files in `src/data_manual/` | AKShare, ChinaBond manual (all .xlsx/.csv in directory) |
 | **chinese_macro** | Varies by series | AKShare, FRED |
 | **global_indicators** | 2015–present (monthly) | FRED |
 | **business_activity** | 2015–present (partial) | FRED |

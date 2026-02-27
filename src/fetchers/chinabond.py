@@ -1,4 +1,4 @@
-﻿"""
+"""
 ChinaBond Loader - Manual data import
 =====================================
 Source: https://www.chinabond.com.cn/
@@ -11,7 +11,7 @@ HOW TO GET DATA:
 2. Navigate to: Yield Curves / 收益率曲线
 3. Select "中债国债收益率曲线" (ChinaBond Treasury Yield Curve)
 4. Download historical data in Excel/CSV format
-5. Save to: data/manual/chinabond_yields.xlsx
+5. Save to: src/data_manual/ (any .xlsx or .csv files in this directory are loaded and combined)
 6. Run this loader to import into database
 """
 
@@ -93,6 +93,56 @@ class ChinaBondLoader:
         except Exception as e:
             print(f"  [ERROR] Error reading CSV file: {e}")
             return pd.DataFrame()
+    
+    def load_from_directory(self) -> pd.DataFrame:
+        """
+        Load and combine all .xlsx and .csv files in self.data_dir.
+        
+        Scans the directory for ChinaBond yield files, loads each, processes via
+        _process_chinabond_data, and merges on date (outer). For columns that
+        appear in multiple files (same maturity), coalesces to first non-null.
+        
+        Returns:
+            Combined DataFrame with date and CN_* columns, or empty if no files found.
+        """
+        files = list(self.data_dir.glob("*.xlsx")) + list(self.data_dir.glob("*.csv"))
+        # Exclude template/placeholder files
+        files = [f for f in files if "template" not in f.name.lower() and "placeholder" not in f.name.lower()]
+        
+        if not files:
+            return pd.DataFrame()
+        
+        all_dfs = []
+        for fp in sorted(files):
+            if fp.suffix.lower() == ".xlsx":
+                df = self.load_from_excel(str(fp))
+            else:
+                df = self.load_from_csv(str(fp))
+            if not df.empty and "date" in df.columns:
+                all_dfs.append(df)
+        
+        if not all_dfs:
+            return pd.DataFrame()
+        
+        if len(all_dfs) == 1:
+            return self.resample_to_monthly(all_dfs[0])
+        
+        # Merge all on date (outer)
+        result = all_dfs[0]
+        for df in all_dfs[1:]:
+            result = result.merge(df, on="date", how="outer", suffixes=("", "_dup"))
+            # Coalesce duplicate columns (drop _dup, keep first non-null)
+            dup_cols = [c for c in result.columns if c.endswith("_dup")]
+            for dup in dup_cols:
+                base = dup.replace("_dup", "")
+                if base in result.columns:
+                    result[base] = result[base].combine_first(result[dup])
+                result = result.drop(columns=[dup])
+        
+        result = result.sort_values("date").reset_index(drop=True)
+        result = self.resample_to_monthly(result)
+        print(f"  [OK] Combined {len(all_dfs)} files from {self.data_dir} -> {len(result)} rows")
+        return result
     
     def _process_chinabond_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """

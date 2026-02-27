@@ -22,13 +22,14 @@ except ImportError:
     DatabaseManager = None
 
 try:
-    from config import ANALYSIS_VARIABLE_PREFIXES
+    from config import ANALYSIS_VARIABLE_PREFIXES, FRED_TABLE_PREFIXES
 except ImportError:
     ANALYSIS_VARIABLE_PREFIXES = [
         'cbr_key_rate', 'cbr_gcurve', 'currency_rates', 'russian_bond_yields',
         'russian_macro', 'pboc_lpr', 'chinese_bond_yields', 'chinese_macro',
         'global_indicators', 'business_activity',
     ]
+    FRED_TABLE_PREFIXES = ['russian_macro', 'chinese_macro', 'global_indicators', 'business_activity']
 
 # Statistical libraries
 try:
@@ -103,6 +104,82 @@ class StatisticalAnalyzer:
         
         print(f"Loaded {len(self.data)} rows of data")
         return self.data
+    
+    def load_yield_curves(self, currency: str, start_date: str = None,
+                          end_date: str = None) -> pd.DataFrame:
+        """
+        Load yield curve data for RU or CN from database.
+        
+        Args:
+            currency: 'RU' or 'CN'
+            start_date: Start date (YYYY-MM-DD), optional
+            end_date: End date (YYYY-MM-DD), optional
+        
+        Returns:
+            DataFrame with date index and columns per maturity (e.g. RU_1Y, RU_2Y or CN_1Y, CN_5Y).
+            Empty DataFrame if no data.
+        """
+        if currency.upper() == 'RU':
+            gcurve = self.db.load_dataframe('cbr_gcurve')
+            ofz = self.db.load_dataframe('russian_bond_yields')
+            if gcurve.empty and ofz.empty:
+                return pd.DataFrame()
+            
+            # Merge on date, coalesce overlapping columns (3Y, 5Y, 10Y may appear in both)
+            if gcurve.empty:
+                result = ofz.copy()
+            elif ofz.empty:
+                result = gcurve.copy()
+            else:
+                result = gcurve.merge(ofz, on='date', how='outer', suffixes=('', '_dup'))
+                dup_cols = [c for c in result.columns if c.endswith('_dup')]
+                for dup in dup_cols:
+                    base = dup.replace('_dup', '')
+                    if base in result.columns:
+                        result[base] = result[base].combine_first(result[dup])
+                    result = result.drop(columns=[dup])
+            
+            yield_cols = [c for c in result.columns if c.startswith('RU_') and c != 'date']
+        elif currency.upper() == 'CN':
+            result = self.db.load_dataframe('chinese_bond_yields')
+            if result.empty:
+                return pd.DataFrame()
+            yield_cols = [c for c in result.columns if c.startswith('CN_') and c != 'date']
+        else:
+            return pd.DataFrame()
+        
+        result = result.sort_values('date')
+        
+        if start_date:
+            start = pd.to_datetime(start_date)
+            result = result[result['date'] >= start]
+        if end_date:
+            end = pd.to_datetime(end_date)
+            result = result[result['date'] <= end]
+        
+        result = result.set_index('date')
+        # Keep only yield columns
+        keep = [c for c in result.columns if c in yield_cols]
+        return result[keep].copy()
+    
+    def get_fred_columns(self) -> List[str]:
+        """
+        Return numeric columns in self.data that start with a FRED table prefix.
+        Use for explicitly restricting analysis to FRED-sourced series.
+        """
+        if self.data is None or self.data.empty:
+            return []
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+        return [c for c in numeric_cols if any(c.startswith(p) for p in FRED_TABLE_PREFIXES)]
+    
+    def yield_curve_descriptive_stats(self, currency: str) -> pd.DataFrame:
+        """
+        Return descriptive stats for each maturity series (mean, std, min, max, count).
+        """
+        df = self.load_yield_curves(currency)
+        if df.empty:
+            return pd.DataFrame()
+        return df.describe().T[['mean', 'std', 'min', 'max', 'count']]
     
     def _get_analysis_columns(self, variables: List[str] = None) -> List[str]:
         """Return numeric columns for analysis; when variables is None use canonical prefixes (combined view naming)."""
@@ -540,6 +617,27 @@ class StatisticalAnalyzer:
         desc_stats = self.descriptive_stats()
         if not desc_stats.empty:
             report_lines.append("\n" + desc_stats.to_string())
+        
+        # FRED-sourced indicators section
+        fred_cols = self.get_fred_columns()
+        if fred_cols:
+            report_lines.append("\n" + "=" * 80)
+            report_lines.append("FRED-SOURCED INDICATORS")
+            report_lines.append("=" * 80)
+            report_lines.append(f"\nFRED columns in data: {fred_cols}")
+            fred_stats = self.descriptive_stats(variables=fred_cols[:5])
+            if not fred_stats.empty:
+                report_lines.append("\nDescriptive stats (sample):")
+                report_lines.append(fred_stats.to_string())
+        
+        # Yield curve statistics
+        for curr in ['RU', 'CN']:
+            yc_stats = self.yield_curve_descriptive_stats(curr)
+            if not yc_stats.empty:
+                report_lines.append(f"\n" + "=" * 80)
+                report_lines.append(f"YIELD CURVE STATISTICS ({curr})")
+                report_lines.append("=" * 80)
+                report_lines.append("\n" + yc_stats.to_string())
         
         # Correlation matrix (sample of key variables)
         report_lines.append("\n" + "=" * 80)

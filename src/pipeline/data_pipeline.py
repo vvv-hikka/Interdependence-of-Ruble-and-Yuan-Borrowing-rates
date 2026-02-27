@@ -41,7 +41,10 @@ class DataPipeline:
         self.akshare = AKShareFetcher()
         self.moex = MOEXFetcher()
         self.cbr = CBRFetcher()
-        self.fred = FREDFetcher(api_key=API_KEYS.get('fred'))
+        fred_key = API_KEYS.get('fred')
+        self.fred = FREDFetcher(api_key=fred_key)
+        if fred_key:
+            print("  [INFO] FRED fetcher using API (FRED_API_KEY set)")
         self.chinabond = ChinaBondLoader()
         
         self._akshare_cache = None
@@ -172,21 +175,25 @@ class DataPipeline:
         all_data = []
         
         print("\n1. From AKShare:")
+        akshare_df = pd.DataFrame()
         if self.akshare.is_available():
-            df = self.akshare.fetch_china_bond_yields_monthly()
-            if not df.empty:
-                all_data.append(df)
+            akshare_df = self.akshare.fetch_china_bond_yields_monthly()
+            if not akshare_df.empty:
+                all_data.append(akshare_df)
         
-        print("\n2. From manual ChinaBond file:")
-        manual_df = self.chinabond.load_from_excel()
+        print("\n2. From manual ChinaBond (src/data_manual/):")
+        manual_df = self.chinabond.load_from_directory()
+        if manual_df.empty:
+            manual_df = self.chinabond.load_from_excel()
         if manual_df.empty:
             manual_df = self.chinabond.load_from_csv()
-        
         if not manual_df.empty:
             manual_monthly = self.chinabond.resample_to_monthly(manual_df)
             all_data.append(manual_monthly)
         
         if all_data:
+            # Use the source with more rows as base
+            all_data.sort(key=lambda d: len(d), reverse=True)
             result = all_data[0]
             for df in all_data[1:]:
                 result = result.merge(df, on='date', how='outer')

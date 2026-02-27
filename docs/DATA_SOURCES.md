@@ -34,7 +34,7 @@ This document catalogues every data source attempted in the pipeline, the method
 | **IMF IFS (China)** | REST API | **FAILED** | 0 rows | All 5 series timeout consistently |
 | **IMF IFS (Business)** | REST API | **FAILED** | 0 rows | All 8 series timeout consistently |
 | **BIS** | Placeholder (no real fetch) | **FAILED** | 0 rows | Requires manual CSV download |
-| **ChinaBond Manual** | Excel/CSV file loader | **N/A** | 0 rows | File not present at `data/manual/chinabond_yields.xlsx` |
+| **ChinaBond Manual** | Loader reads all `.xlsx` and `.csv` in `src/data_manual/` | **N/A** | Varies | Place ChinaBond yield curve exports in `src/data_manual/`; all files combined by date |
 | **CBR Ind. Production** | Placeholder (info messages only) | **FAILED** | 0 rows | Rosstat is the actual source |
 | **CBR Business Confidence** | Placeholder (info messages only) | **FAILED** | 0 rows | |
 | **AKShare Ind. Production** | `macro_china_industrial_*` (multiple names tried) | **FAILED** | 0 rows | No matching akshare method |
@@ -84,7 +84,7 @@ After a successful pipeline run, the database contains these tables:
 
 **Module:** `src/fetchers/fred.py`
 
-- **Method**: CSV download from `fred.stlouisfed.org/graph/fredgraph.csv` (no API key required). Retries on 502 / connection errors (up to 3 attempts with exponential backoff).
+- **Method**: When `FRED_API_KEY` is set (env or config), uses FRED REST API. Otherwise falls back to CSV download from `fred.stlouisfed.org/graph/fredgraph.csv`. Retries on 502 / connection errors (up to 3 attempts with exponential backoff).
 - **Russia**: `RUSCPIALLMINMEI` (CPI, OK), `RUSPROINDMISMEI` (Industrial Production, OK). Data ends ~2022-03 (FRED stopped updating Russian series after sanctions).
 - **China**: `CHNCPIALLMINMEI` (CPI, OK), `DEXCHUS` (USD/CNY, OK).
 - **Global**: `DGS10`, `DGS2`, `FEDFUNDS`, `DCOILBRENTEU`, `DTWEXBGS`, `IPMAN`, `UMCSENT` — all working.
@@ -119,9 +119,8 @@ After a successful pipeline run, the database contains these tables:
 
 **Module:** `src/fetchers/chinabond.py`
 
-- **Method**: Reads Excel/CSV files from `data/manual/chinabond_yields.xlsx`.
-- **Result**: File not present; no manual data loaded. AKShare provides limited alternative (12 months).
-- **To use**: Download yield curve data from [chinabond.com.cn](https://www.chinabond.com.cn/) and save to the path above.
+- **Method**: Scans `src/data_manual/` for all `.xlsx` and `.csv` files (excluding template/placeholder). Loads each via `load_from_excel` or `load_from_csv`, applies `_process_chinabond_data`, and merges on date (outer). Overlapping maturities are coalesced (first non-null).
+- **To use**: Place ChinaBond yield curve exports in `src/data_manual/`. The loader combines all files into one yield curve table. AKShare data is merged when both sources are available; the source with more rows is used as base.
 
 ---
 
