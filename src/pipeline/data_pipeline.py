@@ -11,10 +11,11 @@ from src.fetchers.chinabond import ChinaBondLoader, load_pboc_lpr
 from src.database import DatabaseManager
 
 try:
-    from config import API_KEYS, DEFAULT_START_DATE
+    from config import API_KEYS, DEFAULT_START_DATE, MANUAL_DATA_DIR
 except ImportError:
     API_KEYS = {}
     DEFAULT_START_DATE = "2015-01-01"
+    MANUAL_DATA_DIR = None
 
 
 class DataPipeline:
@@ -181,8 +182,11 @@ class DataPipeline:
             if not akshare_df.empty:
                 all_data.append(akshare_df)
         
-        print("\n2. From manual ChinaBond (src/data_manual/):")
+        print("\n2. From manual ChinaBond (src/data_manual/ or data/manual/):")
         manual_df = self.chinabond.load_from_directory()
+        if manual_df.empty and MANUAL_DATA_DIR is not None:
+            self.chinabond.data_dir = MANUAL_DATA_DIR
+            manual_df = self.chinabond.load_from_directory()
         if manual_df.empty:
             manual_df = self.chinabond.load_from_excel()
         if manual_df.empty:

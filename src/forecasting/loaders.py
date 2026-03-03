@@ -36,9 +36,40 @@ def _load_ru_yields(db: "DatabaseManager") -> pd.DataFrame:
     return result.sort_values("date")
 
 
+def _coalesce_cn_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Merge duplicate CN_* columns (e.g. CN_1Y_x, CN_1Y_y) into single CN_*."""
+    import re
+    base_to_cols = {}
+    for c in df.columns:
+        if not c.startswith("CN_"):
+            continue
+        base = re.sub(r"_(x|y|dup)$", "", c)
+        base_to_cols.setdefault(base, []).append(c)
+    result = df.copy()
+    for base, cols in base_to_cols.items():
+        if len(cols) == 1 and cols[0] == base:
+            continue
+        if len(cols) == 1:
+            result = result.rename(columns={cols[0]: base})
+            continue
+        # Prefer base if present, else first column
+        first = base if base in cols else cols[0]
+        result[base] = result[first].copy()
+        for col in cols:
+            if col != base:
+                result[base] = result[base].combine_first(result[col])
+        drop = [c for c in cols if c != base]
+        if drop:
+            result = result.drop(columns=drop)
+    return result
+
+
 def _load_cn_yields(db: "DatabaseManager") -> pd.DataFrame:
-    """Load Chinese yields from chinese_bond_yields."""
-    return db.load_dataframe("chinese_bond_yields")
+    """Load Chinese yields from chinese_bond_yields (coalesce duplicate CN_* columns)."""
+    df = db.load_dataframe("chinese_bond_yields")
+    if df.empty:
+        return df
+    return _coalesce_cn_columns(df)
 
 
 def load_russian_yield_curve(
@@ -84,7 +115,7 @@ def load_chinese_yield_curve(
     df = _load_cn_yields(db)
     if df.empty:
         return pd.DataFrame()
-    yield_cols = [c for c in df.columns if c.startswith("CN_")]
+    yield_cols = sorted([c for c in df.columns if c.startswith("CN_")])
     if not yield_cols:
         return pd.DataFrame()
     df = df[["date"] + yield_cols].copy()
@@ -95,6 +126,28 @@ def load_chinese_yield_curve(
         df = df[df["date"] <= pd.to_datetime(end_date)]
     df = df.set_index("date")
     return df[yield_cols]
+
+
+def load_global_indicators(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Load FRED global indicators (US rates, oil, USD index) for yield-forecasting context.
+    """
+    if DatabaseManager is None:
+        return pd.DataFrame()
+    db = DatabaseManager(str(DB_PATH))
+    df = db.load_dataframe("global_indicators")
+    if df.empty or "date" not in df.columns:
+        return pd.DataFrame()
+    df = df.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    if start_date:
+        df = df[df["date"] >= pd.to_datetime(start_date)]
+    if end_date:
+        df = df[df["date"] <= pd.to_datetime(end_date)]
+    return df.set_index("date")
 
 
 def load_macro_indicators(

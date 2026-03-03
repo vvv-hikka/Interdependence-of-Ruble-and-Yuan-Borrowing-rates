@@ -27,10 +27,22 @@ def _parse_mat_num(m: str) -> float:
     return val / 12.0 if "M" in m.upper() else val
 
 
+def _normalize_maturity(col: str, prefix: str) -> str:
+    """Extract maturity from column, stripping _x/_y suffixes (e.g. CN_1Y_x -> 1Y)."""
+    import re
+    if not col.startswith(prefix):
+        return ""
+    mat = col.replace(prefix, "", 1)
+    mat = re.sub(r"_(x|y|dup)$", "", mat)
+    return mat
+
+
 def _common_maturities(ru_cols: list, cn_cols: list) -> list:
-    """Return maturities where both curves have data."""
-    ru_set = set(c.replace("RU_", "") for c in ru_cols if c.startswith("RU_"))
-    cn_set = set(c.replace("CN_", "") for c in cn_cols if c.startswith("CN_"))
+    """Return maturities where both curves have data. Normalizes CN_1Y_x -> 1Y for matching."""
+    ru_set = set(_normalize_maturity(c, "RU_") for c in ru_cols if c.startswith("RU_"))
+    cn_set = set(_normalize_maturity(c, "CN_") for c in cn_cols if c.startswith("CN_"))
+    ru_set.discard("")
+    cn_set.discard("")
     common = sorted(ru_set & cn_set, key=lambda m: _parse_mat_num(m))
     return common
 
@@ -47,26 +59,55 @@ def build_spreads(
     Returns:
         DataFrame with date index and columns like spread_1Y, spread_5Y.
     """
-    # Align on date
-    common_dates = ru_yields.index.intersection(cn_yields.index)
-    if len(common_dates) == 0:
+    # Coerce to numeric (RU may have object/None from DB)
+    ru_yields = ru_yields.copy()
+    cn_yields = cn_yields.copy()
+    for c in ru_yields.columns:
+        ru_yields[c] = pd.to_numeric(ru_yields[c], errors="coerce")
+    for c in cn_yields.columns:
+        cn_yields[c] = pd.to_numeric(cn_yields[c], errors="coerce")
+
+    # Merge on month (RU uses 1st-of-month, CN uses end-of-month - align to month-end)
+    ru = ru_yields.reset_index()
+    cn = cn_yields.reset_index()
+    ru = ru.rename(columns={ru.columns[0]: "date"})
+    cn = cn.rename(columns={cn.columns[0]: "date"})
+    ru["date"] = pd.to_datetime(ru["date"])
+    cn["date"] = pd.to_datetime(cn["date"])
+    # Align to month-end so 2019-02-01 (RU) matches 2019-02-28 (CN)
+    ru["month"] = ru["date"].dt.to_period("M").dt.to_timestamp("M")
+    cn["month"] = cn["date"].dt.to_period("M").dt.to_timestamp("M")
+    merged = ru.merge(cn, on="month", how="inner", suffixes=("_ru", "_cn"))
+    if merged.empty:
         return pd.DataFrame()
-    
-    ru_a = ru_yields.loc[common_dates]
-    cn_a = cn_yields.loc[common_dates]
+    # Use month (month-end) as index; drop duplicate date columns
+    merged = merged.drop(columns=[c for c in merged.columns if c in ("date_ru", "date_cn", "date")], errors="ignore")
+    common_dates = merged["month"]
+    ru_a = merged[[c for c in merged.columns if c.startswith("RU_")]].set_index(common_dates)
+    cn_a = merged[[c for c in merged.columns if c.startswith("CN_")]].set_index(common_dates)
     
     maturities = _common_maturities(ru_yields.columns.tolist(), cn_yields.columns.tolist())
     if not maturities:
         return pd.DataFrame()
     
+    def _find_col(df: pd.DataFrame, prefix: str, mat: str) -> Optional[str]:
+        """Find column for maturity (e.g. CN_1Y or CN_1Y_x)."""
+        cand = f"{prefix}{mat}"
+        if cand in df.columns:
+            return cand
+        for suffix in ("_x", "_y"):
+            if f"{cand}{suffix}" in df.columns:
+                return f"{cand}{suffix}"
+        return None
+
     spreads = pd.DataFrame(index=common_dates)
     for mat in maturities:
-        ru_col = f"RU_{mat}"
-        cn_col = f"CN_{mat}"
-        if ru_col in ru_a.columns and cn_col in cn_a.columns:
+        ru_col = _find_col(ru_a, "RU_", mat)
+        cn_col = _find_col(cn_a, "CN_", mat)
+        if ru_col is not None and cn_col is not None:
             s = ru_a[ru_col] - cn_a[cn_col]
             spreads[f"spread_{mat}"] = s
-    
+
     return spreads.dropna(how="all")
 
 

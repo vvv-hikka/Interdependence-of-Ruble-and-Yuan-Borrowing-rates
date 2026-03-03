@@ -11,7 +11,7 @@ HOW TO GET DATA:
 2. Navigate to: Yield Curves / 收益率曲线
 3. Select "中债国债收益率曲线" (ChinaBond Treasury Yield Curve)
 4. Download historical data in Excel/CSV format
-5. Save to: src/data_manual/ (any .xlsx or .csv files in this directory are loaded and combined)
+5. Save to: src/data_manual/ or data/manual/ (all .xlsx/.csv in the directory are loaded and combined)
 6. Run this loader to import into database
 """
 
@@ -144,13 +144,104 @@ class ChinaBondLoader:
         print(f"  [OK] Combined {len(all_dfs)} files from {self.data_dir} -> {len(result)} rows")
         return result
     
+    def _is_long_format(self, df: pd.DataFrame) -> bool:
+        """Check if DataFrame is in long format (Date, maturity column, yield column)."""
+        if df.empty or len(df.columns) < 3:
+            return False
+        cols_lower = [str(c).lower() for c in df.columns]
+        has_yield = any("yield" in c or "rate" in c or "收益率" in c for c in cols_lower)
+        has_terms = any("standard terms" in c or "maturity" in c or "term" in c or "期限" in c for c in cols_lower)
+        return bool(has_yield and has_terms)
+
+    def _process_chinabond_long_format(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Process long-format ChinaBond data (Date, Standard Terms(Years), Yield Rate(%))
+        into wide format with one column per maturity (CN_3M, CN_6M, CN_1Y, ...).
+        """
+        # Find date column
+        date_col = None
+        for col in df.columns:
+            if "date" in str(col).lower() or "日期" in str(col):
+                date_col = col
+                break
+        if date_col is None:
+            date_col = df.columns[0]
+        # Find maturity column (years) — must be numeric maturity (e.g. "Standard Terms(Years)" or "Standard Terms(Yrs)")
+        # Avoid "Instructions for Standard Terms" which has "0d", "1m" etc.
+        mat_col = None
+        for col in df.columns:
+            s = str(col).lower()
+            if ("yrs" in s or "years" in s or "年" in s) and ("term" in s or "maturity" in s):
+                mat_col = col
+                break
+        if mat_col is None:
+            for col in df.columns:
+                s = str(col).lower()
+                if "term" in s and "instruction" not in s and ("year" in s or "yrs" in s or "maturity" in s):
+                    mat_col = col
+                    break
+        if mat_col is None:
+            for col in df.columns:
+                s = str(col).lower()
+                if "term" in s or "maturity" in s or "期限" in s:
+                    mat_col = col
+                    break
+        # Find yield column
+        yield_col = None
+        for col in df.columns:
+            s = str(col).lower()
+            if "yield" in s or "rate" in s or "收益率" in s:
+                yield_col = col
+                break
+        if mat_col is None or yield_col is None:
+            return pd.DataFrame()
+        df = df.copy()
+        df["date"] = pd.to_datetime(df[date_col])
+        df["_mat"] = pd.to_numeric(df[mat_col], errors="coerce")
+        # If maturity column is string (e.g. "1年", "2年"), try to extract numeric part
+        if df["_mat"].isna().all() and df[mat_col].dtype == object:
+            def parse_mat(x):
+                try:
+                    s = str(x).strip()
+                    for sep in ["年", "Y", "y", "Yrs", "yr"]:
+                        if sep in s:
+                            return pd.to_numeric(s.split(sep)[0].strip(), errors="coerce")
+                    return pd.to_numeric(s, errors="coerce")
+                except Exception:
+                    return float("nan")
+            df["_mat"] = df[mat_col].apply(parse_mat)
+        df["_yield"] = pd.to_numeric(df[yield_col], errors="coerce")
+        df = df.dropna(subset=["date", "_mat", "_yield"])
+        # Map maturity (years) to CN_* column names
+        # 0.25->3M, 0.5->6M, 0.75->9M, 1->1Y, 2->2Y, 3->3Y, 5->5Y, 7->7Y, 10->10Y, 15->15Y, 20->20Y, 30->30Y
+        year_to_col = {
+            0.25: "CN_3M", 0.5: "CN_6M", 0.75: "CN_9M",
+            1.0: "CN_1Y", 2.0: "CN_2Y", 3.0: "CN_3Y", 5.0: "CN_5Y", 7.0: "CN_7Y",
+            10.0: "CN_10Y", 15.0: "CN_15Y", 20.0: "CN_20Y", 30.0: "CN_30Y",
+        }
+        # Round to avoid float key issues
+        def mat_to_col(y):
+            y = round(float(y), 2)
+            return year_to_col.get(y)
+        df["_col"] = df["_mat"].apply(mat_to_col)
+        df = df.dropna(subset=["_col"])
+        wide = df.pivot_table(index="date", columns="_col", values="_yield", aggfunc="first").reset_index()
+        wide.columns.name = None
+        wide = wide.sort_values("date").reset_index(drop=True)
+        print(f"  Processed long format -> columns: {list(wide.columns)}")
+        return wide
+
     def _process_chinabond_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Process raw ChinaBond data into standard format.
+        Supports both long format (Date, Standard Terms(Years), Yield Rate(%)) and wide format.
         """
         if df.empty:
             return df
-        
+
+        if self._is_long_format(df):
+            return self._process_chinabond_long_format(df)
+
         # Try to identify date column
         date_col = None
         for col in df.columns:
