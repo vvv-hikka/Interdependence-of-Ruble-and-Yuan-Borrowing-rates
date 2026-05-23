@@ -376,6 +376,87 @@ class DataPipeline:
         return pd.DataFrame()
     
     # =========================================================================
+    # RISK SENTIMENT & COMMODITIES
+    # =========================================================================
+
+    def fetch_risk_sentiment(self, start_date: str = None) -> pd.DataFrame:
+        print("\n" + "="*60)
+        print("FETCHING RISK SENTIMENT INDICATORS")
+        print("="*60)
+
+        df = self.fred.fetch_risk_combined(start_date or DEFAULT_START_DATE)
+        if not df.empty:
+            self._save(df, 'risk_sentiment',
+                       description='Risk sentiment: VIX, US HY OAS (monthly)',
+                       source='FRED API')
+        return df
+
+    def fetch_commodities(self, start_date: str = None) -> pd.DataFrame:
+        print("\n" + "="*60)
+        print("FETCHING COMMODITY PRICES")
+        print("="*60)
+
+        df = self.fred.fetch_commodities_combined(start_date or DEFAULT_START_DATE)
+        if not df.empty:
+            self._save(df, 'commodities',
+                       description='Commodity prices: natural gas, copper (monthly)',
+                       source='FRED API')
+        return df
+
+    # =========================================================================
+    # RUSSIA MONEY MARKETS
+    # =========================================================================
+
+    def fetch_russia_money_markets(self) -> pd.DataFrame:
+        print("\n" + "="*60)
+        print("FETCHING RUSSIA MONEY MARKETS")
+        print("="*60)
+
+        all_data = []
+
+        print("\n1. RUONIA (MOEX):")
+        ruonia = self.moex.fetch_ruonia_monthly()
+        if not ruonia.empty:
+            all_data.append(ruonia)
+
+        print("\n2. Russia FX Reserves (CBR):")
+        fx_res = self.cbr.fetch_fx_reserves_monthly()
+        if not fx_res.empty:
+            all_data.append(fx_res)
+
+        if not all_data:
+            print("  [WARNING] No Russia money market data collected")
+            return pd.DataFrame()
+
+        result = all_data[0]
+        for df in all_data[1:]:
+            result = result.merge(df, on='date', how='outer')
+        result = result.sort_values('date')
+
+        self._save(result, 'russia_money_markets',
+                   description='Russia money markets: RUONIA, FX reserves (monthly)',
+                   source='MOEX ISS, CBR')
+        return result
+
+    # =========================================================================
+    # CHINA MONEY MARKETS
+    # =========================================================================
+
+    def fetch_china_money_markets(self) -> pd.DataFrame:
+        print("\n" + "="*60)
+        print("FETCHING CHINA MONEY MARKETS")
+        print("="*60)
+
+        df = self.akshare.fetch_china_money_markets()
+        if not df.empty:
+            self._save(df, 'china_money_markets',
+                       description='China money markets: SHIBOR, DR007, CNH-CNY, PBoC FX reserves (monthly)',
+                       source='AKShare')
+        else:
+            print("  [WARNING] No China money market data collected")
+        return df
+
+    # =========================================================================
     # FULL PIPELINE
     # =========================================================================
     
@@ -391,13 +472,18 @@ class DataPipeline:
         self.fetch_cbr_data()
         self.fetch_russian_bond_yields(start_date)
         self.fetch_russian_macro(start_date)
-        
+
         self.fetch_pboc_rates()
         self.fetch_chinese_bond_yields()
         self.fetch_chinese_macro(start_date)
-        
+
         self.fetch_global_indicators(start_date)
         self.fetch_business_activity(start_date)
+
+        self.fetch_risk_sentiment(start_date)
+        self.fetch_commodities(start_date)
+        self.fetch_russia_money_markets()
+        self.fetch_china_money_markets()
         
         if not self.test_mode:
             print("\n" + "="*60)
@@ -413,6 +499,94 @@ class DataPipeline:
         start_date = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
         print(f"\nRunning quick update from {start_date}...")
         self.run_full_update(start_date)
+
+    # =========================================================================
+    # WEEKLY UPDATE
+    # =========================================================================
+
+    def run_weekly_update(self, start_date: str = None):
+        """
+        Fetch and persist all weekly-frequency data, then rebuild combined_weekly.
+
+        Sources:
+          - MOEX: OFZ yields weekly
+          - CBR: G-Curve weekly, currency rates weekly
+          - FRED: global indicators weekly, risk sentiment weekly
+          - AKShare: Chinese bond yields weekly
+        """
+        print("\n" + "="*70)
+        print("RUNNING WEEKLY DATA UPDATE")
+        print(f"Start date: {start_date or DEFAULT_START_DATE}")
+        print(f"Mode: {'TEST' if self.test_mode else 'PRODUCTION'}")
+        print("="*70)
+
+        start_time = datetime.now()
+
+        # --- Russian weekly ---
+        print("\n" + "="*60)
+        print("FETCHING RUSSIAN WEEKLY DATA")
+        print("="*60)
+
+        print("\n1. OFZ yields (weekly):")
+        df = self.moex.fetch_ofz_yields_weekly(start_date or DEFAULT_START_DATE)
+        if not df.empty:
+            self._save(df, 'russian_bond_yields_weekly',
+                       description='Russian OFZ yields by maturity (weekly)',
+                       source='MOEX ISS API', frequency='weekly')
+
+        print("\n2. G-Curve (weekly):")
+        df = self.cbr.fetch_gcurve_weekly()
+        if not df.empty:
+            self._save(df, 'cbr_gcurve_weekly',
+                       description='CBR G-Curve yields (weekly)',
+                       source='Bank of Russia', frequency='weekly')
+
+        print("\n3. Currency rates (weekly):")
+        df = self.cbr.fetch_currency_rates_weekly()
+        if not df.empty:
+            self._save(df, 'currency_rates_weekly',
+                       description='CBR currency exchange rates (weekly)',
+                       source='Bank of Russia XML API', frequency='weekly')
+
+        # --- Chinese weekly ---
+        print("\n" + "="*60)
+        print("FETCHING CHINESE WEEKLY DATA")
+        print("="*60)
+
+        print("\n4. Chinese bond yields (weekly):")
+        df = self.akshare.fetch_china_bond_yields_weekly()
+        if not df.empty:
+            self._save(df, 'chinese_bond_yields_weekly',
+                       description='Chinese government bond yields (weekly)',
+                       source='AKShare', frequency='weekly')
+
+        # --- Global weekly ---
+        print("\n" + "="*60)
+        print("FETCHING GLOBAL WEEKLY DATA")
+        print("="*60)
+
+        print("\n5. Global indicators (weekly):")
+        df = self.fred.fetch_global_weekly(start_date or DEFAULT_START_DATE)
+        if not df.empty:
+            self._save(df, 'global_indicators_weekly',
+                       description='Global economic indicators (weekly)',
+                       source='FRED API', frequency='weekly')
+
+        print("\n6. Risk sentiment (weekly):")
+        df = self.fred.fetch_risk_weekly(start_date or DEFAULT_START_DATE)
+        if not df.empty:
+            self._save(df, 'risk_sentiment_weekly',
+                       description='Risk sentiment: VIX, US HY OAS (weekly)',
+                       source='FRED API', frequency='weekly')
+
+        if not self.test_mode:
+            print("\n" + "="*60)
+            print("CREATING COMBINED WEEKLY VIEW")
+            print("="*60)
+            self.db.create_combined_weekly_view()
+
+        elapsed = datetime.now() - start_time
+        print(f"\n[OK] Weekly update completed in {elapsed.total_seconds():.1f} seconds")
 
 
 def main():

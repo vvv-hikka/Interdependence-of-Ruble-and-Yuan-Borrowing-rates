@@ -82,8 +82,10 @@ def main():
         for col, cnt in spread_eval.get("abnormal_counts", {}).items():
             print(f"   {col}: {int(cnt)} abnormal")
 
-    # Stubs
-    print("\n5. AER / Regime-switching DNS: not implemented (stubs)")
+    # Scope note
+    print("\n5. Scope note:")
+    print("   - AER: not implemented yet (placeholder in src/forecasting/aer.py)")
+    print("   - DNS baseline exists in src/forecasting/regime_dns.py")
 
     print("\n" + "=" * 60)
     return 0

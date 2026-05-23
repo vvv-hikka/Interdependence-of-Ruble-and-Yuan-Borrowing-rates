@@ -111,6 +111,16 @@ FRED_SERIES_BUSINESS_ACTIVITY = {
     "UMCSENT": "US Consumer Sentiment",
 }
 
+FRED_SERIES_RISK = {
+    "VIXCLS": "CBOE VIX Volatility Index",
+    "BAMLH0A0HYM2": "US High-Yield OAS (ICE BofA)",
+}
+
+FRED_SERIES_COMMODITIES = {
+    "DHHNGSP": "Henry Hub Natural Gas Spot Price",
+    "PCOPPUSDM": "Copper Price (USD/metric ton)",
+}
+
 # =============================================================================
 # CBR CURRENCY CODES
 # =============================================================================
@@ -140,17 +150,32 @@ DB_TABLES = {
     'pboc_lpr': 'PBOC Loan Prime Rate (monthly)',
     'global_indicators': 'Global economic indicators (monthly)',
     'business_activity': 'Business activity indicators (monthly)',
+    'risk_sentiment': 'Risk sentiment indicators: VIX, US HY spreads (monthly)',
+    'commodities': 'Commodity prices: natural gas, copper (monthly)',
+    'russia_money_markets': 'Russia money markets: RUONIA, CBR FX reserves (monthly)',
+    'china_money_markets': 'China money markets: SHIBOR, DR007, CNH-CNY spread, PBoC FX reserves (monthly)',
 }
 
 # Table prefixes for FRED-sourced data in combined_monthly
 # Use these to explicitly restrict analysis to FRED-backed series
 FRED_TABLE_PREFIXES = ['russian_macro', 'chinese_macro', 'global_indicators', 'business_activity']
 
+# Weekly tables (separate from monthly; combined into combined_weekly view)
+WEEKLY_BASE_TABLES = [
+    'russian_bond_yields_weekly',
+    'cbr_gcurve_weekly',
+    'currency_rates_weekly',
+    'chinese_bond_yields_weekly',
+    'global_indicators_weekly',
+    'risk_sentiment_weekly',
+]
+
 # Base tables only (exclude derived views like combined_monthly)
 BASE_TABLES_FOR_COMBINED_VIEW = [
     'cbr_key_rate', 'cbr_gcurve', 'currency_rates', 'russian_bond_yields',
     'russian_macro', 'pboc_lpr', 'chinese_bond_yields', 'chinese_macro',
     'global_indicators', 'business_activity',
+    'risk_sentiment', 'commodities', 'russia_money_markets', 'china_money_markets',
 ]
 
 # Canonical variable prefixes for analysis (combined view columns are {table}_{col})

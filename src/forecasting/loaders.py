@@ -7,14 +7,28 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    from config import DB_PATH
+    from config import DB_PATH, WEEKLY_BASE_TABLES
 except ImportError:
     DB_PATH = Path(__file__).parent.parent.parent / "bond_rates_database.db"
+    WEEKLY_BASE_TABLES = [
+        'russian_bond_yields_weekly', 'cbr_gcurve_weekly', 'currency_rates_weekly',
+        'chinese_bond_yields_weekly', 'global_indicators_weekly', 'risk_sentiment_weekly',
+    ]
 
 try:
     from src.database import DatabaseManager
 except ImportError:
     DatabaseManager = None
+
+
+def _normalise_to_month_end(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalise the 'date' column to month-end and keep the last row per month."""
+    df = df.copy()
+    df["date"] = pd.to_datetime(df["date"]) + pd.offsets.MonthEnd(0)
+    # If multiple source rows fall in the same month-end, combine_first them
+    df = df.set_index("date")
+    df = df.groupby(level=0).last()  # keep row with most-recent data per month
+    return df.reset_index()
 
 
 def _load_ru_yields(db: "DatabaseManager") -> pd.DataFrame:
@@ -24,9 +38,12 @@ def _load_ru_yields(db: "DatabaseManager") -> pd.DataFrame:
     if gcurve.empty and ofz.empty:
         return pd.DataFrame()
     if gcurve.empty:
-        return ofz
+        return _normalise_to_month_end(ofz)
     if ofz.empty:
-        return gcurve
+        return _normalise_to_month_end(gcurve)
+    # Normalise each table to month-end before merging so dates align properly
+    gcurve = _normalise_to_month_end(gcurve)
+    ofz = _normalise_to_month_end(ofz)
     result = gcurve.merge(ofz, on="date", how="outer", suffixes=("", "_dup"))
     for dup in [c for c in result.columns if c.endswith("_dup")]:
         base = dup.replace("_dup", "")
@@ -91,6 +108,7 @@ def load_russian_yield_curve(
     yield_cols = [c for c in df.columns if c.startswith("RU_")]
     df = df[["date"] + yield_cols].copy()
     df["date"] = pd.to_datetime(df["date"])
+    # Month-end normalisation already done in _load_ru_yields; dates are clean here
     if start_date:
         df = df[df["date"] >= pd.to_datetime(start_date)]
     if end_date:
@@ -185,3 +203,126 @@ def load_macro_indicators(
     if end_date:
         combined = combined[combined["date"] <= pd.to_datetime(end_date)]
     return combined.set_index("date")
+
+
+# =============================================================================
+# WEEKLY LOADERS
+# =============================================================================
+
+def _load_ru_yields_weekly(db: "DatabaseManager") -> pd.DataFrame:
+    """Load Russian weekly yields: cbr_gcurve_weekly filled with russian_bond_yields_weekly."""
+    gcurve = db.load_dataframe("cbr_gcurve_weekly")
+    ofz = db.load_dataframe("russian_bond_yields_weekly")
+    if gcurve.empty and ofz.empty:
+        return pd.DataFrame()
+    if gcurve.empty:
+        return ofz
+    if ofz.empty:
+        return gcurve
+    result = gcurve.merge(ofz, on="date", how="outer", suffixes=("", "_dup"))
+    for dup in [c for c in result.columns if c.endswith("_dup")]:
+        base = dup.replace("_dup", "")
+        if base in result.columns:
+            result[base] = result[base].combine_first(result[dup])
+        result = result.drop(columns=[dup])
+    return result.sort_values("date")
+
+
+def load_russian_yield_curve_weekly(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Load Russian weekly yield curve from DB.
+
+    Returns:
+        DataFrame with date index and RU_* columns.
+    """
+    if DatabaseManager is None:
+        return pd.DataFrame()
+    db = DatabaseManager(str(DB_PATH))
+    df = _load_ru_yields_weekly(db)
+    if df.empty:
+        return pd.DataFrame()
+    yield_cols = [c for c in df.columns if c.startswith("RU_")]
+    df = df[["date"] + yield_cols].copy()
+    df["date"] = pd.to_datetime(df["date"])
+    # Normalise to week-end (already W-FRI) — keep consistent with monthly fix
+    if start_date:
+        df = df[df["date"] >= pd.to_datetime(start_date)]
+    if end_date:
+        df = df[df["date"] <= pd.to_datetime(end_date)]
+    return df.set_index("date")[yield_cols]
+
+
+def load_chinese_yield_curve_weekly(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Load Chinese weekly yield curve from DB.
+
+    Returns:
+        DataFrame with date index and CN_* columns.
+    """
+    if DatabaseManager is None:
+        return pd.DataFrame()
+    db = DatabaseManager(str(DB_PATH))
+    df = db.load_dataframe("chinese_bond_yields_weekly")
+    if df.empty:
+        return pd.DataFrame()
+    df = _coalesce_cn_columns(df)
+    yield_cols = sorted([c for c in df.columns if c.startswith("CN_")])
+    if not yield_cols:
+        return pd.DataFrame()
+    df = df[["date"] + yield_cols].copy()
+    df["date"] = pd.to_datetime(df["date"])
+    if start_date:
+        df = df[df["date"] >= pd.to_datetime(start_date)]
+    if end_date:
+        df = df[df["date"] <= pd.to_datetime(end_date)]
+    return df.set_index("date")[yield_cols]
+
+
+def load_currency_rates_weekly(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Load weekly currency rates (USD/RUB, CNY/RUB, EUR/RUB).
+    """
+    if DatabaseManager is None:
+        return pd.DataFrame()
+    db = DatabaseManager(str(DB_PATH))
+    df = db.load_dataframe("currency_rates_weekly")
+    if df.empty or "date" not in df.columns:
+        return pd.DataFrame()
+    df = df.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    if start_date:
+        df = df[df["date"] >= pd.to_datetime(start_date)]
+    if end_date:
+        df = df[df["date"] <= pd.to_datetime(end_date)]
+    cols = [c for c in ["usd_rub", "cny_rub", "eur_rub"] if c in df.columns]
+    if not cols:
+        return pd.DataFrame()
+    return df.set_index("date")[cols].sort_index()
+
+
+def load_combined_weekly(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """Load the combined_weekly view from DB."""
+    if DatabaseManager is None:
+        return pd.DataFrame()
+    db = DatabaseManager(str(DB_PATH))
+    df = db.load_dataframe("combined_weekly")
+    if df.empty:
+        return df
+    df["date"] = pd.to_datetime(df["date"])
+    if start_date:
+        df = df[df["date"] >= pd.to_datetime(start_date)]
+    if end_date:
+        df = df[df["date"] <= pd.to_datetime(end_date)]
+    return df.set_index("date")

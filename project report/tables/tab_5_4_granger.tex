@@ -1,0 +1,16 @@
+\begin{table}
+\caption{Granger causality}
+\label{tab:5_4}
+\begin{tabular}{llrrl}
+\toprule
+cause & effect & best_lag & best_p & significant \\
+\midrule
+LPR1Y & cbr_key_rate & 1 & 0.6484 & No \\
+cbr_key_rate & LPR1Y & 1 & 0.1311 & No \\
+DGS10 & cbr_key_rate & 6 & 0.0143 & Yes \\
+cbr_key_rate & DGS10 & 1 & 0.8118 & No \\
+DCOILBRENTEU & cbr_key_rate & 3 & 0.0115 & Yes \\
+cbr_key_rate & DCOILBRENTEU & 1 & 0.0978 & No \\
+\bottomrule
+\end{tabular}
+\end{table}

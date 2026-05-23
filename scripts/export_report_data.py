@@ -16,6 +16,7 @@ Output:
 import os
 import sys
 import re
+import subprocess
 from pathlib import Path
 
 # Add project root to path
@@ -275,7 +276,13 @@ def run_statistical_analysis():
             fitted = model.fit(best_lag)
             var_info = f"Variables: {', '.join(var_cols)}\nLag order (AIC): {best_lag}"
             (TABLES_DIR / "tab_5_5_var.txt").write_text(var_info, encoding='utf-8')
+            var_df = pd.DataFrame(
+                [{"Variables": ", ".join(var_cols), "AIC_lag": best_lag, "Observations": len(var_data)}]
+            )
+            var_latex = var_df.to_latex(index=False, caption="VAR model specification", label="tab:5_5")
+            (TABLES_DIR / "tab_5_5_var.tex").write_text(var_latex, encoding='utf-8')
             print("Exported tab_5_5_var.txt")
+            print("Exported tab_5_5_var.tex")
         except Exception as e:
             print(f"VAR failed: {e}")
 
@@ -531,11 +538,132 @@ def run_figures():
             print("Saved fig_6_2_ns_residuals.png")
 
 
+def run_model_comparison_export():
+    """
+    Run walk-forward model comparison and export report-ready artifacts.
+    """
+    cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "run_model_comparison.py"),
+        "--curve", "both",
+        "--horizon", "1",
+        "--train-window", "60",
+        "--export-prefix",
+        str(TABLES_DIR / "tab_6_3_model_comparison"),
+    ]
+    print("\nRunning out-of-sample model comparison export...")
+    proc = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    if proc.returncode != 0:
+        print("Model comparison export failed:")
+        print(proc.stderr or proc.stdout)
+        return
+    print("Exported model comparison tables/figure (tab_6_3_*)")
+
+
+def run_portfolio_backtest_export():
+    """
+    Run simple constrained portfolio backtest and export summary CSV.
+    """
+    cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "run_portfolio_backtest.py"),
+    ]
+    print("\nRunning portfolio backtest export...")
+    proc = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    if proc.returncode != 0:
+        print("Portfolio backtest export failed:")
+        print(proc.stderr or proc.stdout)
+        return
+    print("Exported portfolio summary to data/processed/portfolio_backtest_summary.csv")
+
+
+def run_advanced_comparison_export():
+    """
+    Run advanced-method comparison (AER proxy + regime DNS) and export report table.
+    """
+    cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "run_advanced_comparison.py"),
+        "--output-prefix",
+        str(TABLES_DIR / "tab_6_4_advanced_methods"),
+    ]
+    print("\nRunning advanced-method comparison export...")
+    proc = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    if proc.returncode != 0:
+        print("Advanced comparison export failed:")
+        print(proc.stderr or proc.stdout)
+        return
+    print("Exported advanced comparison table (tab_6_4_advanced_methods.*)")
+
+
+def run_ml_signals_export():
+    """
+    Run ML signal generation + ML backtest exports.
+    """
+    sig_cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "run_ml_signals.py"),
+        "--save-prefix",
+        str(PROJECT_ROOT / "data" / "processed" / "ml_signals"),
+    ]
+    print("\nRunning ML signal export...")
+    proc = subprocess.run(sig_cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    if proc.returncode != 0:
+        print("ML signal export failed:")
+        print(proc.stderr or proc.stdout)
+        return
+    print("Exported ML signals to data/processed/ml_signals*.csv")
+
+    bt_cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "run_ml_backtest.py"),
+    ]
+    print("Running ML backtest export...")
+    proc = subprocess.run(bt_cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    if proc.returncode != 0:
+        print("ML backtest export failed:")
+        print(proc.stderr or proc.stdout)
+        return
+    print("Exported ML backtest summary to data/processed/ml_backtest_summary.csv")
+
+
 def main():
     import pandas as pd
+    import argparse
+    parser = argparse.ArgumentParser(description="Export report data and figures")
+    parser.add_argument(
+        "--with-model-comparison",
+        action="store_true",
+        help="Also run walk-forward model comparison export for section 6 artifacts",
+    )
+    parser.add_argument(
+        "--with-portfolio-backtest",
+        action="store_true",
+        help="Also run portfolio/risk backtest summary export",
+    )
+    parser.add_argument(
+        "--with-advanced-comparison",
+        action="store_true",
+        help="Also run advanced-method comparison export (AER proxy + regime DNS)",
+    )
+    parser.add_argument(
+        "--with-ml-signals",
+        action="store_true",
+        help="Also run ML signal + ML backtest exports",
+    )
+    args = parser.parse_args()
+
     print("Exporting report tables...")
     run_statistical_analysis()
     run_yield_forecasting_export()
+    if args.with_model_comparison:
+        run_model_comparison_export()
+    if args.with_portfolio_backtest:
+        run_portfolio_backtest_export()
+    if args.with_advanced_comparison:
+        run_advanced_comparison_export()
+    if args.with_ml_signals:
+        run_ml_signals_export()
     print("\nGenerating figures...")
     run_figures()
     print("\nDone. Tables in project report/tables/, figures in project report/graphics/")

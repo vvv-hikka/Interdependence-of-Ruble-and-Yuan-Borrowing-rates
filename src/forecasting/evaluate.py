@@ -78,3 +78,32 @@ def evaluate_spreads(
             if col.endswith("_abnormal"):
                 results["abnormal_counts"][col] = flagged_df[col].sum()
     return results
+
+
+def summarize_rmse_table(
+    rmse_df: pd.DataFrame,
+    model_cols: list = None,
+) -> Dict[str, Any]:
+    """
+    Summarize RMSE table:
+      - mean RMSE per model
+      - best model by maturity
+      - win counts by model
+    """
+    if rmse_df is None or rmse_df.empty:
+        return {"mean_rmse": {}, "best_model_by_maturity": {}, "wins": {}}
+    if model_cols is None:
+        model_cols = [c for c in ("RW", "NS_static", "DNS", "VAR", "PCA") if c in rmse_df.columns]
+    if not model_cols:
+        return {"mean_rmse": {}, "best_model_by_maturity": {}, "wins": {}}
+
+    model_frame = rmse_df[model_cols].copy()
+    mean_rmse = {k: float(v) for k, v in model_frame.mean(skipna=True).to_dict().items()}
+    best_model = model_frame.idxmin(axis=1).to_dict()
+    wins = pd.Series(best_model).value_counts().to_dict()
+    wins = {k: int(v) for k, v in wins.items()}
+    return {
+        "mean_rmse": mean_rmse,
+        "best_model_by_maturity": best_model,
+        "wins": wins,
+    }

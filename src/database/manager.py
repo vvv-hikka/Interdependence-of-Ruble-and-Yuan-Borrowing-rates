@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any
 
 try:
-    from config import DB_PATH, DB_TABLES, BASE_TABLES_FOR_COMBINED_VIEW
+    from config import DB_PATH, DB_TABLES, BASE_TABLES_FOR_COMBINED_VIEW, WEEKLY_BASE_TABLES
 except ImportError:
     DB_PATH = Path(__file__).parent.parent.parent / "bond_rates_database.db"
     DB_TABLES = {}
@@ -18,6 +18,11 @@ except ImportError:
         'cbr_key_rate', 'cbr_gcurve', 'currency_rates', 'russian_bond_yields',
         'russian_macro', 'pboc_lpr', 'chinese_bond_yields', 'chinese_macro',
         'global_indicators', 'business_activity',
+        'risk_sentiment', 'commodities', 'russia_money_markets', 'china_money_markets',
+    ]
+    WEEKLY_BASE_TABLES = [
+        'russian_bond_yields_weekly', 'cbr_gcurve_weekly', 'currency_rates_weekly',
+        'chinese_bond_yields_weekly', 'global_indicators_weekly', 'risk_sentiment_weekly',
     ]
 
 
@@ -220,6 +225,36 @@ class DatabaseManager:
         
         return combined if combined is not None else pd.DataFrame()
     
+    def create_combined_weekly_view(self) -> pd.DataFrame:
+        """
+        Create combined_weekly by outer-joining all WEEKLY_BASE_TABLES on date.
+        Drops and rebuilds on each call, same pattern as create_combined_monthly_view.
+        """
+        print("\nCreating combined weekly view...")
+        self.drop_table('combined_weekly')
+
+        all_tables = self.list_tables()
+        tables = [t for t in all_tables if t in WEEKLY_BASE_TABLES]
+
+        combined = None
+        for table in tables:
+            df = self.load_dataframe(table)
+            if df.empty or 'date' not in df.columns:
+                continue
+            cols_to_rename = {col: f"{table}_{col}" for col in df.columns if col != 'date'}
+            df = df.rename(columns=cols_to_rename)
+            combined = df if combined is None else combined.merge(df, on='date', how='outer')
+
+        if combined is not None:
+            combined = combined.sort_values('date')
+            self.save_dataframe(
+                combined, 'combined_weekly',
+                description='Combined view of all weekly data',
+                source='Derived from weekly tables'
+            )
+            return combined
+        return pd.DataFrame()
+
     # =========================================================================
     # DATA SUMMARY
     # =========================================================================

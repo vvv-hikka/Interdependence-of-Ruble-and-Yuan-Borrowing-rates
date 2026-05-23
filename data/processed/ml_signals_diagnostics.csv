@@ -1,0 +1,12 @@
+metric,value
+n_predictions,36.0
+trade_rate,0.6388888888888888
+accuracy,0.3611111111111111
+precision,0.07692307692307693
+recall,0.08333333333333333
+f1,0.08
+roc_auc,0.4201388888888889
+directional_hit_when_active,0.4782608695652174
+proba_logit_mean,0.45426669444444445
+proba_rf_mean,0.436222
+proba_ensemble_mean,0.44524438888888895

@@ -245,33 +245,68 @@ class CBRFetcher:
     def fetch_gcurve_yields(self, date_from: str, date_to: str) -> pd.DataFrame:
         """
         Fetch G-Curve yields for standard maturities from CBR.
-        
+
+        The page returns a table with two header rows (MultiIndex):
+          Level 0: 'Дата' | 'Срок до погашения, лет' ...
+          Level 1: 'Дата' | '0,25' | '0,5' | '0,75' | '1' | '2' | ...
+
+        This method flattens to a single-level DataFrame with columns:
+          date, 0.25, 0.5, 0.75, 1, 2, 3, 5, 7, 10, 15, 20, 30
+
         Args:
             date_from: Start date (DD.MM.YYYY)
             date_to: End date (DD.MM.YYYY)
         """
         url = "https://www.cbr.ru/hd_base/zcyc_params/"
-        
         params = {
             "UniDbQuery.Posted": "True",
             "UniDbQuery.From": date_from,
-            "UniDbQuery.To": date_to
+            "UniDbQuery.To": date_to,
         }
-        
+
         try:
             response = self.session.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
-            
-            tables = pd.read_html(StringIO(response.text), decimal=',', thousands=' ')
-            
-            if tables and len(tables) > 0:
-                df = tables[0]
-                print(f"  [OK] G-Curve yields: {len(df)} records")
-                return df
-            
+
+            tables = pd.read_html(StringIO(response.text), decimal=',', thousands=' ',
+                                  header=[0, 1])
+
+            if not tables:
+                print("  [ERROR] No tables found on CBR G-Curve page")
+                return pd.DataFrame()
+
+            df = tables[0].copy()
+
+            # Flatten MultiIndex columns: take the second level value,
+            # replace comma-decimal with dot (e.g. '0,25' → '0.25')
+            new_cols = []
+            for col in df.columns:
+                if isinstance(col, tuple):
+                    val = str(col[1]).strip().replace(',', '.')
+                else:
+                    val = str(col).strip().replace(',', '.')
+                new_cols.append(val)
+            df.columns = new_cols
+
+            # Rename date column
+            date_col = new_cols[0]  # first column is always the date
+            df = df.rename(columns={date_col: 'date'})
+
+            # Convert date strings ('30.12.2024' format)
+            df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+            df = df.dropna(subset=['date'])
+
+            # Convert all numeric columns
+            for col in df.columns:
+                if col != 'date':
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+            print(f"  [OK] G-Curve yields: {len(df)} records, columns: {list(df.columns)}")
+            return df
+
         except Exception as e:
             print(f"  [ERROR] Error fetching G-Curve yields: {e}")
-        
+
         return pd.DataFrame()
     
     def fetch_gcurve_monthly(self, start_year: int = 2015) -> pd.DataFrame:
@@ -558,6 +593,148 @@ class CBRFetcher:
         
         return data
     
+    # =========================================================================
+    # INTERNATIONAL RESERVES (FX RESERVES)
+    # =========================================================================
+
+    def fetch_gcurve_weekly(self, start_year: int = 2015) -> pd.DataFrame:
+        """
+        Fetch G-Curve yields and resample to weekly frequency (Friday week-end, last).
+        Reuses the daily fetch logic from fetch_gcurve_monthly.
+        """
+        end_date = datetime.now()
+        all_data = []
+
+        for year in range(start_year, end_date.year + 1):
+            year_start = f"01.01.{year}"
+            year_end = f"31.12.{year}" if year < end_date.year else end_date.strftime("%d.%m.%Y")
+            df = self.fetch_gcurve_yields(year_start, year_end)
+            if not df.empty:
+                all_data.append(df)
+
+        if not all_data:
+            return pd.DataFrame()
+
+        combined = pd.concat(all_data, ignore_index=True)
+        date_col = combined.columns[0]
+        if date_col != 'date':
+            combined = combined.rename(columns={date_col: 'date'})
+        combined['date'] = pd.to_datetime(combined['date'], dayfirst=True, errors='coerce')
+        combined = combined.dropna(subset=['date'])
+
+        for col in combined.columns:
+            if col != 'date':
+                combined[col] = pd.to_numeric(
+                    combined[col].astype(str).str.replace(',', '.'), errors='coerce'
+                )
+
+        maturity_map = {
+            '0.25': 'RU_3M', '0.5': 'RU_6M', '1': 'RU_1Y', '2': 'RU_2Y',
+            '3': 'RU_3Y', '5': 'RU_5Y', '7': 'RU_7Y', '10': 'RU_10Y',
+            '15': 'RU_15Y', '20': 'RU_20Y', '30': 'RU_30Y',
+        }
+        new_cols = {}
+        for col in combined.columns:
+            if col == 'date':
+                continue
+            col_str = str(col).strip()
+            for pattern, target in maturity_map.items():
+                if col_str in (pattern, f'{pattern}.0', f'{pattern}.00'):
+                    new_cols[col] = target
+                    break
+        if new_cols:
+            combined = combined.rename(columns=new_cols)
+
+        combined = combined.set_index('date')
+        numeric_cols = [c for c in combined.columns if c.startswith('RU_')]
+        if not numeric_cols:
+            return pd.DataFrame()
+
+        weekly = combined[numeric_cols].resample('W-FRI').last().reset_index()
+        print(f"  [OK] Weekly G-Curve: {len(weekly)} weeks")
+        return weekly
+
+    def fetch_currency_rates_weekly(self) -> pd.DataFrame:
+        """
+        Fetch USD/RUB, CNY/RUB, EUR/RUB and resample to weekly (Friday, last).
+        """
+        print("\nFetching CBR currency rates (weekly)...")
+        usd = self.fetch_usd_rate()
+        cny = self.fetch_cny_rate()
+        eur = self.fetch_eur_rate()
+
+        rates = None
+        for df in [usd, cny, eur]:
+            if df.empty:
+                continue
+            rates = df if rates is None else rates.merge(df, on='date', how='outer')
+
+        if rates is None or rates.empty:
+            return pd.DataFrame()
+
+        weekly = rates.set_index('date').resample('W-FRI').last().reset_index()
+        print(f"  [OK] Weekly currency rates: {len(weekly)} weeks")
+        return weekly
+
+    def fetch_fx_reserves(self) -> pd.DataFrame:
+        """
+        Fetch Russia's international reserves (gold + FX) at monthly frequency.
+        Source: CBR MRRF monthly HTML page.
+
+        Returns:
+            DataFrame with columns: date, fx_reserves_bln_usd
+        """
+        url = "https://www.cbr.ru/hd_base/mrrf/mrrf_m/"
+        params = {
+            "UniDbQuery.Posted": "True",
+            "UniDbQuery.From": "01.01.2015",
+            "UniDbQuery.To": datetime.now().strftime("%d.%m.%Y"),
+        }
+
+        try:
+            response = self.session.get(url, params=params, timeout=self.timeout)
+            response.raise_for_status()
+
+            tables = pd.read_html(StringIO(response.text), decimal=',', thousands=' ')
+            if not tables:
+                print("  [ERROR] No tables found on CBR MRRF page")
+                return pd.DataFrame()
+
+            df = tables[0].copy()
+
+            # Expect first col = date, second col = reserves value
+            if df.shape[1] < 2:
+                print(f"  [ERROR] Unexpected MRRF table shape: {df.shape}")
+                return pd.DataFrame()
+
+            df = df.iloc[:, :2].copy()
+            df.columns = ['date', 'fx_reserves_bln_usd']
+            df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+            df['fx_reserves_bln_usd'] = pd.to_numeric(
+                df['fx_reserves_bln_usd'].astype(str).str.replace(',', '.').str.replace(' ', ''),
+                errors='coerce'
+            )
+            df = df.dropna().sort_values('date')
+            print(f"  [OK] Russia FX reserves: {len(df)} records")
+            return df
+
+        except Exception as e:
+            print(f"  [ERROR] Error fetching CBR FX reserves: {e}")
+            return pd.DataFrame()
+
+    def fetch_fx_reserves_monthly(self) -> pd.DataFrame:
+        """
+        Fetch Russia's international reserves at monthly frequency.
+        The source is already monthly, but this normalises dates to month-end.
+        """
+        df = self.fetch_fx_reserves()
+        if df.empty:
+            return df
+        df = df.set_index('date')
+        monthly = df.resample('ME').last().reset_index()
+        print(f"  [OK] Russia FX reserves monthly: {len(monthly)} months")
+        return monthly
+
     # =========================================================================
     # BUSINESS ACTIVITY INDICATORS
     # =========================================================================

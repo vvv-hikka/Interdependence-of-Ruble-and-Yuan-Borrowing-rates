@@ -388,6 +388,116 @@ class MOEXFetcher:
         return pd.DataFrame([dict(zip(cols, row)) for row in rows])
     
     # =========================================================================
+    # RUONIA (OVERNIGHT RATE)
+    # =========================================================================
+
+    def fetch_ofz_yields_weekly(self, from_date: str = None, to_date: str = None) -> pd.DataFrame:
+        """
+        Fetch OFZ yields and resample to weekly frequency (Friday week-end, mean).
+        Returns pivoted DataFrame with maturities as columns (RU_2Y, RU_5Y, …).
+        """
+        df = self.fetch_ofz_yields(from_date, to_date)
+        if df.empty:
+            return pd.DataFrame()
+
+        df["week"] = df["date"].dt.to_period("W").dt.to_timestamp("W-FRI")
+        weekly = df.groupby(["week", "maturity"]).agg({"yield": "mean"}).reset_index()
+        weekly = weekly.rename(columns={"week": "date"})
+        wide = weekly.pivot(index="date", columns="maturity", values="yield")
+        wide.columns = [f"RU_{col}" for col in wide.columns]
+        wide = wide.reset_index()
+        print(f"  [OK] Weekly OFZ yields: {len(wide)} weeks")
+        return wide
+
+    def fetch_ruonia(self, from_date: str = None, to_date: str = None) -> pd.DataFrame:
+        """
+        Fetch RUONIA (Ruble Overnight Index Average) — the CBR's operational target rate.
+        Source: MOEX ISS statistics analytics endpoint.
+
+        Args:
+            from_date: Start date (YYYY-MM-DD), defaults to 2015-01-01
+            to_date: End date (YYYY-MM-DD), defaults to today
+
+        Returns:
+            DataFrame with columns: date, ruonia
+        """
+        if from_date is None:
+            from_date = "2015-01-01"
+        if to_date is None:
+            to_date = datetime.now().strftime("%Y-%m-%d")
+
+        print(f"\nFetching RUONIA from {from_date} to {to_date}...")
+
+        # MOEX ISS analytics endpoint for RUONIA
+        url = f"{self.BASE_URL}/statistics/engines/currency/markets/index/analytics/RUONIA.json"
+        all_data = []
+        start = 0
+
+        while True:
+            params = {
+                "from": from_date,
+                "till": to_date,
+                "start": start,
+                "limit": 100,
+            }
+            try:
+                response = self.session.get(url, params=params, timeout=self.timeout)
+                response.raise_for_status()
+                data = response.json()
+            except Exception as e:
+                print(f"  [ERROR] RUONIA request failed: {e}")
+                break
+
+            if not data or "analytics" not in data:
+                break
+
+            cols = data["analytics"].get("columns", [])
+            rows = data["analytics"].get("data", [])
+            if not rows:
+                break
+
+            all_data.extend([dict(zip(cols, row)) for row in rows])
+            start += 100
+            if len(rows) < 100:
+                break
+            time.sleep(0.1)
+
+        if not all_data:
+            print("  [ERROR] No RUONIA data returned")
+            return pd.DataFrame()
+
+        df = pd.DataFrame(all_data)
+
+        # Normalise date and value columns
+        date_col = next((c for c in df.columns if 'date' in c.lower() or 'tradedate' in c.lower()), None)
+        val_col = next((c for c in df.columns if 'rate' in c.lower() or 'value' in c.lower()
+                        or 'ruonia' in c.lower()), None)
+
+        if date_col is None or val_col is None:
+            print(f"  [WARN] Unexpected RUONIA columns: {list(df.columns)}")
+            return pd.DataFrame()
+
+        df = df[[date_col, val_col]].copy()
+        df.columns = ['date', 'ruonia']
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        df['ruonia'] = pd.to_numeric(df['ruonia'], errors='coerce')
+        df = df.dropna().sort_values('date')
+
+        print(f"  [OK] RUONIA: {len(df)} records")
+        return df
+
+    def fetch_ruonia_monthly(self, from_date: str = None, to_date: str = None) -> pd.DataFrame:
+        """
+        Fetch RUONIA and resample to monthly average.
+        """
+        df = self.fetch_ruonia(from_date, to_date)
+        if df.empty:
+            return df
+        monthly = df.set_index('date').resample('ME').mean().reset_index()
+        print(f"  [OK] RUONIA monthly: {len(monthly)} months")
+        return monthly
+
+    # =========================================================================
     # CORPORATE BONDS
     # =========================================================================
     

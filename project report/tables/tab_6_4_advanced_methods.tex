@@ -1,0 +1,14 @@
+\begin{table}
+\caption{Advanced method comparison (AER proxy and regime DNS)}
+\label{tab:6_4}
+\begin{tabular}{llrl}
+\toprule
+Method & Metric & Value & Notes \\
+\midrule
+NS_baseline & RMSE_mean & 0.141584 & In-sample overall RMSE \\
+AER_proxy & Objective_mean & 0.025394 & MSE + lambda * curvature penalty \\
+AER_proxy & Penalty_mean & 0.018732 & Average curvature smoothness penalty \\
+Regime_DNS & 1step_RMSE_last & 0.251929 & Status=fitted; macro=global_indicators_DGS10 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -330,6 +330,173 @@ class AKShareFetcher:
         return df
     
     # =========================================================================
+    # CHINA MONEY MARKETS
+    # =========================================================================
+
+    def fetch_shibor(self) -> pd.DataFrame:
+        """
+        Fetch SHIBOR (Shanghai Interbank Offered Rate) history.
+        Returns daily rates for multiple tenors; caller resamples to monthly.
+        """
+        if not self.is_available():
+            return pd.DataFrame()
+
+        candidates = ["rate_interbank", "macro_china_shibor", "rate_shibor"]
+        df = self._try_akshare_methods(candidates, "SHIBOR")
+        if not df.empty:
+            print(f"  [OK] SHIBOR: {len(df)} records")
+        return df
+
+    def fetch_dr007(self) -> pd.DataFrame:
+        """
+        Fetch DR007 (7-day pledged repo rate) — the PBoC's operating target.
+        Tries multiple AKShare method names.
+        """
+        if not self.is_available():
+            return pd.DataFrame()
+
+        candidates = [
+            "bond_repo_zh_sina",
+            "macro_china_market_loan_rate",
+            "macro_china_repo_rate",
+            "bond_repo_hist",
+        ]
+        df = self._try_akshare_methods(candidates, "DR007")
+        if not df.empty:
+            print(f"  [OK] DR007: {len(df)} records")
+        return df
+
+    def fetch_cnh_cny_spread(self) -> pd.DataFrame:
+        """
+        Fetch CNH−CNY spread (offshore vs onshore yuan premium).
+        Measures capital account pressure. Tries multiple AKShare method names.
+        """
+        if not self.is_available():
+            return pd.DataFrame()
+
+        candidates = [
+            "currency_hist_cnh_cny",
+            "fx_spot_quote",
+            "macro_china_cnh_cny",
+        ]
+        df = self._try_akshare_methods(candidates, "CNH-CNY spread")
+        if not df.empty:
+            print(f"  [OK] CNH-CNY spread: {len(df)} records")
+        return df
+
+    def fetch_pboc_fx_reserves_monthly(self) -> pd.DataFrame:
+        """
+        Fetch PBoC foreign exchange reserves at monthly frequency.
+        Tries monthly endpoint first, falls back to yearly.
+        """
+        if not self.is_available():
+            return pd.DataFrame()
+
+        candidates = [
+            "macro_china_fx_reserves",
+            "macro_china_fx_reserves_monthly",
+            "macro_china_foreign_exchange_reserves",
+        ]
+        df = self._try_akshare_methods(candidates, "PBoC FX reserves (monthly)")
+
+        if df.empty:
+            # Fall back to yearly
+            try:
+                df = self.ak.macro_china_fx_reserves_yearly()
+                if df is not None and not df.empty:
+                    print(f"  [OK] PBoC FX reserves (yearly fallback): {len(df)} records")
+            except Exception:
+                pass
+
+        if not df.empty:
+            print(f"  [OK] PBoC FX reserves: {len(df)} records")
+        return df
+
+    def fetch_china_money_markets(self) -> pd.DataFrame:
+        """
+        Fetch all China money market indicators and merge into a single monthly DataFrame.
+        Columns: date, SHIBOR_*, DR007_*, cnh_cny_spread, pboc_fx_reserves.
+        """
+        if not self.is_available():
+            return pd.DataFrame()
+
+        all_data = []
+
+        # --- SHIBOR ---
+        shibor = self.fetch_shibor()
+        if not shibor.empty:
+            date_col = next((c for c in shibor.columns
+                             if 'date' in str(c).lower() or '日期' in str(c)), None)
+            if date_col:
+                shibor = shibor.rename(columns={date_col: 'date'}) if date_col != 'date' else shibor
+                shibor['date'] = pd.to_datetime(shibor['date'], errors='coerce')
+                shibor = shibor.dropna(subset=['date'])
+                numeric = shibor.select_dtypes(include=['number']).columns.tolist()
+                rename = {c: f'SHIBOR_{c}' for c in numeric}
+                shibor = shibor[['date'] + numeric].rename(columns=rename)
+                shibor = shibor.set_index('date')
+                shibor = shibor.resample('ME').last().reset_index()
+                all_data.append(shibor)
+
+        # --- DR007 ---
+        dr007 = self.fetch_dr007()
+        if not dr007.empty:
+            date_col = next((c for c in dr007.columns
+                             if 'date' in str(c).lower() or '日期' in str(c)), None)
+            if date_col:
+                dr007 = dr007.rename(columns={date_col: 'date'}) if date_col != 'date' else dr007
+                dr007['date'] = pd.to_datetime(dr007['date'], errors='coerce')
+                dr007 = dr007.dropna(subset=['date'])
+                numeric = dr007.select_dtypes(include=['number']).columns.tolist()
+                rename = {c: f'DR007_{c}' for c in numeric}
+                dr007 = dr007[['date'] + numeric].rename(columns=rename)
+                dr007 = dr007.set_index('date')
+                dr007 = dr007.resample('ME').last().reset_index()
+                all_data.append(dr007)
+
+        # --- CNH-CNY spread ---
+        cnh = self.fetch_cnh_cny_spread()
+        if not cnh.empty:
+            date_col = next((c for c in cnh.columns
+                             if 'date' in str(c).lower() or '日期' in str(c)), None)
+            if date_col:
+                cnh = cnh.rename(columns={date_col: 'date'}) if date_col != 'date' else cnh
+                cnh['date'] = pd.to_datetime(cnh['date'], errors='coerce')
+                cnh = cnh.dropna(subset=['date'])
+                numeric = cnh.select_dtypes(include=['number']).columns.tolist()
+                rename = {c: f'cnh_cny_{c}' for c in numeric}
+                cnh = cnh[['date'] + numeric].rename(columns=rename)
+                cnh = cnh.set_index('date')
+                cnh = cnh.resample('ME').last().reset_index()
+                all_data.append(cnh)
+
+        # --- PBoC FX reserves ---
+        fx = self.fetch_pboc_fx_reserves_monthly()
+        if not fx.empty:
+            date_col = next((c for c in fx.columns
+                             if 'date' in str(c).lower() or '日期' in str(c)
+                             or '月份' in str(c) or 'year' in str(c).lower()), None)
+            if date_col:
+                fx = fx.rename(columns={date_col: 'date'}) if date_col != 'date' else fx
+                fx['date'] = pd.to_datetime(fx['date'], errors='coerce')
+                fx = fx.dropna(subset=['date'])
+                numeric = fx.select_dtypes(include=['number']).columns.tolist()
+                rename = {c: f'pboc_fx_reserves_{c}' for c in numeric}
+                fx = fx[['date'] + numeric].rename(columns=rename)
+                fx = fx.set_index('date')
+                fx = fx.resample('ME').last().reset_index()
+                all_data.append(fx)
+
+        if not all_data:
+            print("  [INFO] No China money market data collected")
+            return pd.DataFrame()
+
+        result = all_data[0]
+        for df in all_data[1:]:
+            result = result.merge(df, on='date', how='outer')
+        return result.sort_values('date').reset_index(drop=True)
+
+    # =========================================================================
     # EXCHANGE RATES
     # =========================================================================
     
@@ -391,6 +558,62 @@ class AKShareFetcher:
         
         return data
     
+    def fetch_china_bond_yields_weekly(self) -> pd.DataFrame:
+        """
+        Fetch Chinese government bond yields and resample to weekly (Friday, last).
+        Uses the same source as fetch_china_bond_yields_monthly.
+        """
+        df = self.fetch_china_bond_yields()
+        if df.empty:
+            return df
+
+        date_col = next((c for c in ['日期', 'date', 'Date', 'DATE'] if c in df.columns), None)
+        if date_col is None:
+            print("  [ERROR] Cannot find date column in bond yields data for weekly resample")
+            return pd.DataFrame()
+
+        try:
+            df['date'] = pd.to_datetime(df[date_col])
+            df = df.set_index('date')
+            numeric_cols = df.select_dtypes(include=['number']).columns
+            weekly = df[numeric_cols].resample('W-FRI').last().reset_index()
+
+            rename_map = {}
+            for i, col in enumerate(weekly.columns):
+                if col == 'date':
+                    continue
+                col_str = str(col).strip()
+                if '0.25' in col_str or '3月' in col_str:
+                    rename_map[col] = 'CN_3M'
+                elif '0.5' in col_str or '6月' in col_str:
+                    rename_map[col] = 'CN_6M'
+                elif '1年' in col_str or col_str in ('1', '1.0'):
+                    rename_map[col] = 'CN_1Y'
+                elif '2年' in col_str or col_str in ('2', '2.0'):
+                    rename_map[col] = 'CN_2Y'
+                elif '3年' in col_str or col_str in ('3', '3.0'):
+                    rename_map[col] = 'CN_3Y'
+                elif '5年' in col_str or col_str in ('5', '5.0'):
+                    rename_map[col] = 'CN_5Y'
+                elif '7年' in col_str or col_str in ('7', '7.0'):
+                    rename_map[col] = 'CN_7Y'
+                elif '10年' in col_str or col_str in ('10', '10.0'):
+                    rename_map[col] = 'CN_10Y'
+                elif '15年' in col_str or col_str in ('15', '15.0'):
+                    rename_map[col] = 'CN_15Y'
+                elif '30年' in col_str or col_str in ('30', '30.0'):
+                    rename_map[col] = 'CN_30Y'
+                else:
+                    rename_map[col] = f'CN_yield_{i}'
+            if rename_map:
+                weekly = weekly.rename(columns=rename_map)
+
+            print(f"  [OK] China bond yields weekly: {len(weekly)} weeks")
+            return weekly
+        except Exception as e:
+            print(f"  [ERROR] Error resampling to weekly: {e}")
+            return pd.DataFrame()
+
     def fetch_china_bond_yields_monthly(self) -> pd.DataFrame:
         """
         Fetch and resample Chinese bond yields to monthly frequency.

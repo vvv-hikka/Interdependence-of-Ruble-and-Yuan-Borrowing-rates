@@ -17,9 +17,17 @@ from typing import Optional, Dict, List
 from io import StringIO
 
 try:
-    from config import FRED_OPTIONAL_SERIES
+    from config import FRED_OPTIONAL_SERIES, FRED_SERIES_RISK, FRED_SERIES_COMMODITIES
 except ImportError:
     FRED_OPTIONAL_SERIES = frozenset()
+    FRED_SERIES_RISK = {
+        "VIXCLS": "CBOE VIX Volatility Index",
+        "BAMLH0A0HYM2": "US High-Yield OAS (ICE BofA)",
+    }
+    FRED_SERIES_COMMODITIES = {
+        "DHHNGSP": "Henry Hub Natural Gas Spot Price",
+        "PCOPPUSDM": "Copper Price (USD/metric ton)",
+    }
 
 
 class FREDFetcher:
@@ -345,6 +353,72 @@ class FREDFetcher:
         return result
     
     # =========================================================================
+    # RISK SENTIMENT DATA
+    # =========================================================================
+
+    def fetch_risk_combined(self, start_date: str = None,
+                            end_date: str = None) -> pd.DataFrame:
+        """
+        Fetch risk sentiment indicators: VIX and US High-Yield OAS.
+        Both are daily/weekly series resampled to monthly last.
+        """
+        print("\nFetching risk sentiment indicators from FRED...")
+
+        all_data = []
+        for series_id, description in FRED_SERIES_RISK.items():
+            print(f"  Fetching {description}...")
+            df = self.fetch_series(series_id, start_date, end_date)
+            if not df.empty:
+                df = df.rename(columns={'value': series_id})
+                all_data.append(df)
+                print(f"    [OK] {len(df)} records")
+            else:
+                print(f"    [ERROR] No data for {series_id}")
+
+        if not all_data:
+            return pd.DataFrame()
+
+        result = all_data[0]
+        for df in all_data[1:]:
+            result = result.merge(df, on='date', how='outer')
+
+        result = result.sort_values('date')
+        return self.resample_to_monthly(result)
+
+    # =========================================================================
+    # COMMODITIES DATA
+    # =========================================================================
+
+    def fetch_commodities_combined(self, start_date: str = None,
+                                   end_date: str = None) -> pd.DataFrame:
+        """
+        Fetch commodity prices: Henry Hub natural gas and copper.
+        Resampled to monthly last.
+        """
+        print("\nFetching commodity prices from FRED...")
+
+        all_data = []
+        for series_id, description in FRED_SERIES_COMMODITIES.items():
+            print(f"  Fetching {description}...")
+            df = self.fetch_series(series_id, start_date, end_date)
+            if not df.empty:
+                df = df.rename(columns={'value': series_id})
+                all_data.append(df)
+                print(f"    [OK] {len(df)} records")
+            else:
+                print(f"    [ERROR] No data for {series_id}")
+
+        if not all_data:
+            return pd.DataFrame()
+
+        result = all_data[0]
+        for df in all_data[1:]:
+            result = result.merge(df, on='date', how='outer')
+
+        result = result.sort_values('date')
+        return self.resample_to_monthly(result)
+
+    # =========================================================================
     # BUSINESS ACTIVITY DATA
     # =========================================================================
     
@@ -382,10 +456,76 @@ class FREDFetcher:
         return self.resample_to_monthly(result)
     
     # =========================================================================
+    # RESAMPLE HELPERS
+    # =========================================================================
+
+    def resample_to_weekly(self, df: pd.DataFrame,
+                           date_col: str = 'date') -> pd.DataFrame:
+        """Resample DataFrame to weekly frequency (Friday week-end, last value)."""
+        if df.empty:
+            return df
+        df = df.set_index(date_col)
+        numeric_cols = df.select_dtypes(include=['number']).columns
+        weekly = df[numeric_cols].resample('W-FRI').last().reset_index()
+        return weekly
+
+    def fetch_global_weekly(self, start_date: str = None,
+                            end_date: str = None) -> pd.DataFrame:
+        """
+        Fetch daily FRED global indicators and resample to weekly.
+        Covers series that update at daily/weekly frequency and are most
+        useful for weekly signal work: US yields, Brent, USD index.
+        """
+        weekly_series = {
+            "DGS10": "US 10-Year Treasury Yield",
+            "DGS2": "US 2-Year Treasury Yield",
+            "DCOILBRENTEU": "Brent Crude Oil Price",
+            "DTWEXBGS": "Trade Weighted USD Index",
+        }
+        print("\nFetching weekly global indicators from FRED...")
+        all_data = []
+        for series_id, description in weekly_series.items():
+            print(f"  Fetching {description}...")
+            df = self.fetch_series(series_id, start_date, end_date)
+            if not df.empty:
+                df = df.rename(columns={'value': series_id})
+                all_data.append(df)
+                print(f"    [OK] {len(df)} records")
+            else:
+                print(f"    [ERROR] No data for {series_id}")
+        if not all_data:
+            return pd.DataFrame()
+        result = all_data[0]
+        for df in all_data[1:]:
+            result = result.merge(df, on='date', how='outer')
+        return self.resample_to_weekly(result.sort_values('date'))
+
+    def fetch_risk_weekly(self, start_date: str = None,
+                          end_date: str = None) -> pd.DataFrame:
+        """Fetch VIX and US HY OAS resampled to weekly frequency."""
+        print("\nFetching weekly risk sentiment indicators from FRED...")
+        all_data = []
+        for series_id, description in FRED_SERIES_RISK.items():
+            print(f"  Fetching {description}...")
+            df = self.fetch_series(series_id, start_date, end_date)
+            if not df.empty:
+                df = df.rename(columns={'value': series_id})
+                all_data.append(df)
+                print(f"    [OK] {len(df)} records")
+            else:
+                print(f"    [ERROR] No data for {series_id}")
+        if not all_data:
+            return pd.DataFrame()
+        result = all_data[0]
+        for df in all_data[1:]:
+            result = result.merge(df, on='date', how='outer')
+        return self.resample_to_weekly(result.sort_values('date'))
+
+    # =========================================================================
     # RESAMPLE TO MONTHLY
     # =========================================================================
-    
-    def resample_to_monthly(self, df: pd.DataFrame, 
+
+    def resample_to_monthly(self, df: pd.DataFrame,
                             date_col: str = 'date') -> pd.DataFrame:
         """
         Resample DataFrame to monthly frequency.
