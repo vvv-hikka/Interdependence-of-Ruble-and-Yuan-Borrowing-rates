@@ -25,9 +25,8 @@ def _normalise_to_month_end(df: pd.DataFrame) -> pd.DataFrame:
     """Normalise the 'date' column to month-end and keep the last row per month."""
     df = df.copy()
     df["date"] = pd.to_datetime(df["date"]) + pd.offsets.MonthEnd(0)
-    # If multiple source rows fall in the same month-end, combine_first them
     df = df.set_index("date")
-    df = df.groupby(level=0).last()  # keep row with most-recent data per month
+    df = df.groupby(level=0).last()
     return df.reset_index()
 
 
@@ -41,7 +40,6 @@ def _load_ru_yields(db: "DatabaseManager") -> pd.DataFrame:
         return _normalise_to_month_end(ofz)
     if ofz.empty:
         return _normalise_to_month_end(gcurve)
-    # Normalise each table to month-end before merging so dates align properly
     gcurve = _normalise_to_month_end(gcurve)
     ofz = _normalise_to_month_end(ofz)
     result = gcurve.merge(ofz, on="date", how="outer", suffixes=("", "_dup"))
@@ -69,7 +67,6 @@ def _coalesce_cn_columns(df: pd.DataFrame) -> pd.DataFrame:
         if len(cols) == 1:
             result = result.rename(columns={cols[0]: base})
             continue
-        # Prefer base if present, else first column
         first = base if base in cols else cols[0]
         result[base] = result[first].copy()
         for col in cols:
@@ -108,7 +105,6 @@ def load_russian_yield_curve(
     yield_cols = [c for c in df.columns if c.startswith("RU_")]
     df = df[["date"] + yield_cols].copy()
     df["date"] = pd.to_datetime(df["date"])
-    # Month-end normalisation already done in _load_ru_yields; dates are clean here
     if start_date:
         df = df[df["date"] >= pd.to_datetime(start_date)]
     if end_date:
@@ -205,9 +201,52 @@ def load_macro_indicators(
     return combined.set_index("date")
 
 
-# =============================================================================
-# WEEKLY LOADERS
-# =============================================================================
+def load_currency_rates(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Load monthly currency rates (USD/RUB, CNY/RUB, EUR/RUB).
+    """
+    if DatabaseManager is None:
+        return pd.DataFrame()
+    db = DatabaseManager(str(DB_PATH))
+    df = db.load_dataframe("currency_rates")
+    if df.empty or "date" not in df.columns:
+        return pd.DataFrame()
+    df = df.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    if start_date:
+        df = df[df["date"] >= pd.to_datetime(start_date)]
+    if end_date:
+        df = df[df["date"] <= pd.to_datetime(end_date)]
+    cols = [c for c in ["usd_rub", "cny_rub", "eur_rub"] if c in df.columns]
+    if not cols:
+        return pd.DataFrame()
+    return df.set_index("date")[cols].sort_index()
+
+
+def load_risk_sentiment(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Load optional monthly risk sentiment table (if available).
+    """
+    if DatabaseManager is None:
+        return pd.DataFrame()
+    db = DatabaseManager(str(DB_PATH))
+    df = db.load_dataframe("risk_sentiment")
+    if df.empty or "date" not in df.columns:
+        return pd.DataFrame()
+    df = df.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    if start_date:
+        df = df[df["date"] >= pd.to_datetime(start_date)]
+    if end_date:
+        df = df[df["date"] <= pd.to_datetime(end_date)]
+    return df.set_index("date").sort_index()
+
 
 def _load_ru_yields_weekly(db: "DatabaseManager") -> pd.DataFrame:
     """Load Russian weekly yields: cbr_gcurve_weekly filled with russian_bond_yields_weekly."""
@@ -247,7 +286,6 @@ def load_russian_yield_curve_weekly(
     yield_cols = [c for c in df.columns if c.startswith("RU_")]
     df = df[["date"] + yield_cols].copy()
     df["date"] = pd.to_datetime(df["date"])
-    # Normalise to week-end (already W-FRI) — keep consistent with monthly fix
     if start_date:
         df = df[df["date"] >= pd.to_datetime(start_date)]
     if end_date:

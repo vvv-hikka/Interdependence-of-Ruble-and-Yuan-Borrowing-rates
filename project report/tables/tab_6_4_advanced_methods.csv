@@ -1,5 +1,0 @@
-Method,Metric,Value,Notes
-NS_baseline,RMSE_mean,0.14158433643154567,In-sample overall RMSE
-AER_proxy,Objective_mean,0.025393652411812608,MSE + lambda * curvature penalty
-AER_proxy,Penalty_mean,0.018732375741921208,Average curvature smoothness penalty
-Regime_DNS,1step_RMSE_last,0.2519285984810806,Status=fitted; macro=global_indicators_DGS10

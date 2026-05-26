@@ -1,2 +1,0 @@
-Variables: cbr_key_rate, LPR1Y, DGS10, DCOILBRENTEU, CN_10Y
-Lag order (AIC): 1

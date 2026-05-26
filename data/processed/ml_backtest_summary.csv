@@ -1,3 +1,0 @@
-strategy,ann_sharpe,max_drawdown,var95_empirical,mean_return,hit_ratio,active_pct
-ml_strategy,1.9348,-0.0024,0.0018,0.002083,0.5278,0.6389
-ml_passive_spread,-0.8269,-0.07,0.0112,-0.001422,0.3333,1.0

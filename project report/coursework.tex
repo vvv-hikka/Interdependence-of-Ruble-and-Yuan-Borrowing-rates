@@ -1,16 +1,12 @@
 \documentclass[a4paper,12pt]{extarticle}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[english,russian]{babel}
-\usepackage{geometry}
-\geometry{margin=2.5cm}
-\usepackage{hyperref}
-\usepackage{url}
-\usepackage{enumitem}
-\usepackage{geometry}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
 \usepackage[main=english,russian]{babel}
+\usepackage{geometry}
+\geometry{left=2.5cm,right=1.5cm,top=2cm,bottom=2cm}
+\usepackage{url}
+\usepackage[strings]{underscore}
+\usepackage{enumitem}
 \usepackage{amsmath}
 \usepackage{amsthm}
 \usepackage{amssymb}
@@ -30,43 +26,33 @@ urldate=long,
 maxbibnames=99
 ]{biblatex}
 \addbibresource{refs.bib}
-\usepackage[colorlinks,citecolor=blue,linkcolor=blue,bookmarks=false,hypertexnames=true, urlcolor=blue]{hyperref} 
-\usepackage{indentfirst}
+\usepackage[colorlinks,citecolor=blue,linkcolor=blue,bookmarks=false,hypertexnames=true,urlcolor=blue]{hyperref}
 \usepackage{mathtools}
 \usepackage{booktabs}
 \usepackage[flushleft]{threeparttable}
-\usepackage{tablefootnote}
 
-\usepackage{chngcntr} % нумерация графиков и таблиц по секциям
+\usepackage{chngcntr}
 \counterwithin{table}{section}
 \counterwithin{figure}{section}
 
-\graphicspath{{graphics/}}%путь к рисункам
+\graphicspath{{graphics/}}
 
-\makeatletter
-% \renewcommand{\@biblabel}[1]{#1.} % Заменяем библиографию с квадратных скобок на точку:
-\makeatother
-
-\geometry{left=2.5cm}% левое поле
-\geometry{right=1.0cm}% правое поле
-\geometry{top=2.0cm}% верхнее поле
-\geometry{bottom=2.0cm}% нижнее поле
 \setlength{\parindent}{1.25cm}
 \renewcommand{\baselinestretch}{1.5} % междустрочный интервал
 
 
-\newcommand{\bibref}[3]{\hyperlink{#1}{#2 (#3)}} % biblabel, authors, year
+\newcommand{\bibref}[3]{\hyperlink{#1}{#2 (#3)}} 
 \addto\captionsrussian{\def\refname{Список литературы (или источников)}} 
 
-\renewcommand{\theenumi}{\arabic{enumi}}% Меняем везде перечисления на цифра.цифра
-\renewcommand{\labelenumi}{\arabic{enumi}}% Меняем везде перечисления на цифра.цифра
-\renewcommand{\theenumii}{.\arabic{enumii}}% Меняем везде перечисления на цифра.цифра
-\renewcommand{\labelenumii}{\arabic{enumi}.\arabic{enumii}.}% Меняем везде перечисления на цифра.цифра
-\renewcommand{\theenumiii}{.\arabic{enumiii}}% Меняем везде перечисления на цифра.цифра
-\renewcommand{\labelenumiii}{\arabic{enumi}.\arabic{enumii}.\arabic{enumiii}.}% Меняем везде перечисления на цифра.цифра
+\renewcommand{\theenumi}{\arabic{enumi}}%
+\renewcommand{\labelenumi}{\arabic{enumi}}%
+\renewcommand{\theenumii}{.\arabic{enumii}}%
+\renewcommand{\labelenumii}{\arabic{enumi}.\arabic{enumii}.}%
+\renewcommand{\theenumiii}{.\arabic{enumiii}}%
+\renewcommand{\labelenumiii}{\arabic{enumi}.\arabic{enumii}.\arabic{enumiii}.}%
 
 \begin{document}
-\input{title_kr}% это титульный лист - выберите подходящий вам из имеющихся в проекте вариантов (kr - курсовая работа у 3 курса, vkr - выпускная квалификационная работа у 4 курса)
+\input{title_kr}%
 \newpage
 \setcounter{page}{2}
 
@@ -79,202 +65,326 @@ maxbibnames=99
 
 \newpage
 \section*{Annotation} 
-\addcontentsline{toc}{section}{Annotation}  % add Annotation to Table of Contents
+\addcontentsline{toc}{section}{Annotation}
 
-Most portfolio optimization research focuses on isolated components, such as forecasting or risk models. This project addresses this gap by developing a comprehensive, integrated system for the Ruble and Yuan fixed‑income markets, with a \textbf{narrow focus on arbitrage opportunities identification}. The system identifies deviations from no‑arbitrage and relative‑value misalignments between RUB and CNY yield curves, using methods ranging from parametric residuals to arbitrage‑regularized neural filters and regime‑switching models. The resulting signals feed into a unified portfolio‑construction process under explicit risk constraints. The objective is to deliver a practical tool for detecting arbitrage potential and enhancing investment decision‑making in these interconnected markets.
+This project develops an end-to-end system that connects the analysis of Ruble and Yuan borrowing rates to executable, governance-constrained portfolio decisions. The goal is to identify relative-value opportunities and maximise risk-adjusted return subject to VaR, liquidity, turnover, and reproducibility constraints. The implemented stack combines: (i) a modular data pipeline (CBR, MOEX, FRED, AKShare, ChinaBond), (ii) statistical analysis of RUB/CNY interdependence, (iii) forecasting baselines and spread diagnostics, (iv) an arbitrage signal layer with triple-barrier/meta-labeling and ML classifiers, (v) regime smoothing with Markov-switching probabilities and persistence filters, and (vi) a confidence-weighted router with explicit no-trade reasons. Reliability and robustness diagnostics (Brier/reliability bins, threshold/cost stability grids, artifact schema checks) are included in the current workflow. AER remains an extension, while regime-aware decisioning and risk-aware backtests are already operational in the current implementation.
 
-
-
-\section*{\foreignlanguage{russian}{Аннотация}}   % this is how to use russian
+\section*{\foreignlanguage{russian}{Аннотация}}
 \foreignlanguage{russian}{
-Большинство исследований по оптимизации портфеля рассматривает отдельные компоненты, например, прогнозные или риск-модели. Этот проект устраняет этот пробел, создавая целостную, интегрированную систему для рынков рубля и юаня с фиксированным доходом с \textbf{узким фокусом на выявлении арбитражных возможностей}. Система выявляет отклонения от условия отсутствия арбитража и относительные ценовые искажения между кривыми доходности RUB и CNY, применяя методы от параметрических остатков до нейросетевых фильтров с арбитражной регуляризацией и моделей переключения режимов. Полученные сигналы используются в едином процессе построения портфеля при явных ограничениях по риску. Цель — предоставить практический инструмент для выявления арбитражного потенциала и улучшения инвестиционных решений на этих взаимосвязанных рынках.
+Проект разрабатывает сквозную систему, связывающую анализ ставок заимствования рубля и юаня с исполняемыми портфельными решениями при ограничениях риска и воспроизводимости. Реализованы: конвейер данных (ChinaBond \texttt{load\_from\_directory()}, FRED API), \texttt{StatisticalAnalyzer} (описательная статистика, корреляция, стационарность, коинтеграция, Грейнджер, VAR, OLS), блок прогнозирования и сигналов (NS-подгонка, кросс-валютные спреды, triple-barrier/meta-labeling, ML-классификаторы), сглаживание режимов (Markov-switching с фильтром устойчивости), а также confidence-weighted роутер с причинами no-trade. Добавлены диагностические контуры надёжности и устойчивости (Brier/reliability, sensitivity grids). AER сохраняется как расширение, тогда как режимно-осведомлённые решения и риск-учитывающие бэктесты уже внедрены.
 }
 
 \section*{Keywords}
-\noindent RUB/CNY borrowing rates; arbitrage opportunities identification; yield-curve modeling; no-arbitrage constraints; regime switching; central bank communication; macroeconomic indicators; portfolio optimization.
+\noindent RUB/CNY borrowing rates; relative-value opportunities; arbitrage identification; yield-curve modeling; Nelson--Siegel; portfolio optimization; VaR constraints; data pipeline; statistical analysis; cross-currency spreads.
 
 \pagebreak
 
 \section{Introduction}
 
-Yield curves summarize the term structure of interest rates across maturities. They are simultaneously market objects (constructed from traded instruments) and economic objects (reflecting expectations about inflation, growth, and monetary policy). In cross-market analysis, yield-curve dynamics are shaped by domestic macroeconomic conditions, international transmission mechanisms, and monetary-policy communication.
+Ruble and Yuan borrowing rates are key price signals for investors, issuers, and policy observers. In both markets, the yield curve reflects domestic macro policy, inflation expectations, liquidity conditions, and international transmission channels. These channels generate nontrivial co-movements between RUB and CNY term structures, but they also create temporary dislocations across maturities and currencies. In practice, analysts often need a reproducible way to detect such dislocations and evaluate whether they are economically meaningful after costs and risk controls.
 
-\subsection{Motivation and Background}
+Despite significant progress in yield-curve modeling, operational workflows are often fragmented: one stack for data collection, another for forecasting diagnostics, and a separate layer for strategy testing. This fragmentation weakens traceability and makes it harder to compare methods under a consistent out-of-sample protocol. The present project addresses this practical gap in the RUB/CNY fixed-income setting by implementing an end-to-end system that links data ingestion, signal generation, regime handling, decision routing, and backtest/inference reporting in one artifact-driven pipeline.
 
-The increasing financial and macroeconomic interdependence between the Russian and Chinese economies has created distinct co‑movements in Ruble and Yuan borrowing rates. While academic and practitioner literature offers advanced models for individual aspects of portfolio construction—such as signal generation, risk measurement, or yield‑curve forecasting—a persistent gap remains: the absence of an operationally viable, end‑to‑end system that coherently integrates these components into a single governed workflow. This project is motivated by the need to bridge that gap, providing a systematic framework that translates market analysis into executable portfolio decisions under realistic institutional constraints.
+\subsection{Motivation and background}
 
-\subsection{Scope and Objective}
-The project focuses on the Ruble (RUB) and Yuan (CNY) fixed‑income universe, including sovereign bonds, interest‑rate swaps, and cross‑currency instruments. Its primary objective is to design, implement, and validate a fully integrated analytical system that:
+The identification of arbitrage opportunities in fixed-income markets remains a central problem. No-arbitrage models are designed to describe internally coherent curves, but market data still contain frictions, delayed adjustment, and cross-market imbalances. This raises a practical question: can model residuals, spread deviations, and regime-conditioned dynamics be used as reliable decision inputs in a controlled strategy framework?
+
+For RUB/CNY markets, this question is especially relevant. The environment combines heterogeneous policy regimes, uneven data coverage across sources, and non-negligible transaction frictions. A method that looks promising in isolated statistical diagnostics may fail once costs, turnover, and confidence thresholds are applied. Therefore, the project is motivated not only by forecasting quality, but by the need to convert forecasting outputs into transparent and risk-aware decisions.
+
+\subsection{Scope and objective}
+
+Formally, this coursework is a software project with analytical validation. The scope is to design and evaluate a reproducible decision-support system for relative-value and arbitrage-style detection in RUB/CNY fixed-income data. The system integrates classical and ML signal families, regime labeling, and routing rules under explicit operational constraints.
+
+The core objectives are:
+\begin{enumerate}[leftmargin=*, itemsep=0.3em]
+\item \textbf{Comparative evaluation.} Run a consistent out-of-sample comparison of implemented classical and ML approaches, and assess not only economic metrics but also inference and robustness diagnostics.
+\item \textbf{Arbitrage signal system.} Convert forecasting and spread outputs (residuals, z-score spread deviations, regime-conditioned behavior) into structured monthly signals.
+\item \textbf{Decision routing and governance.} Apply confidence/expected-edge gates, disagreement checks, and regime conflict logic to produce auditable trade/no-trade decisions with reason codes.
+\item \textbf{Portfolio-level validation.} Evaluate outputs with cost-aware backtests, turnover diagnostics, and statistical inference so that conclusions are conservative and traceable.
+\end{enumerate}
+
+\subsection{Relevance and practical significance}
+
+The project has both methodological and practical value. Methodologically, it shows how to combine labeling discipline (triple-barrier and meta-targets), leakage-aware validation (purged/embargo scheme), calibration/stability checks, and regime-aware routing in one coherent workflow. Practically, it provides an operator-facing decision chain with explicit fields (\texttt{selected\_model}, \texttt{confidence}, \texttt{expected\_net\_edge}, \texttt{reason\_code}, \texttt{no\_trade}) and unified decision exports for monthly review.
+
+For applied use, this matters because profitability claims in this domain are highly sensitive to sampling, costs, and thresholds. A reproducible process with schema-checked artifacts and explicit claim governance is more valuable than isolated point estimates. The framework is therefore intended as a controlled decision-support prototype rather than an unconditional alpha claim.
+
+\subsection{Current stage}
+
+At the current stage, the following components are implemented in the repository:
 \begin{itemize}
-\item[1] \textbf{Identifies arbitrage opportunities}---deviations from no‑arbitrage and relative‑value misalignments between RUB and CNY yield curves---using methods such as arbitrage‑regularized forecasting, regime‑switching models, and cross‑currency spread analysis;
-
-\item[2] Combines these arbitrage signals with policy‑ and macro‑driven inputs into a unified portfolio‑construction engine; and
-
-\item[3] Produces optimal exposure adjustments subject to explicit risk limits, liquidity constraints, and transaction‑cost considerations.
+\item \textbf{Data pipeline.} Modular ingestion from CBR, MOEX, FRED, AKShare, and manual ChinaBond sources with SQLite persistence and monthly-aligned panels.
+\item \textbf{Statistical layer.} Descriptive statistics, correlation analysis, stationarity/cointegration diagnostics, Granger causality, VAR, and OLS artifacts.
+\item \textbf{Yield-curve and spread baseline.} Nelson--Siegel fitting for RU/CN curves, residual diagnostics, matched-maturity RUB--CNY spreads, and abnormal spread flags.
+\item \textbf{ML signal layer.} Triple-barrier labels, meta-target construction, walk-forward training with purged/embargo logic, and multi-model probability outputs.
+\item \textbf{Regime and routing layer.} Rule-based regimes, Markov-smoothed states with persistence filtering, lagged causal usage, and confidence-weighted decision routing with reason codes.
+\item \textbf{Evaluation and reporting.} Classical/ML/regime/unified backtests, cost and turnover diagnostics, bootstrap/paired-test inference, schema checks, and notebook-based reproducible demo flow.
 \end{itemize}
 
-\subsection{Relevance and Practical Significance}
-As dedollarization accelerates and bilateral trade and financial linkages deepen, the RUB‑CNY rate relationship has become a critical channel for relative‑value opportunities and risk‑spillover management. Existing tools typically address only isolated parts of the investment process, leaving portfolio managers without a consistent, auditable methodology to capture this interdependence. This project therefore delivers a practical, institution‑ready solution that enhances decision‑support capabilities for asset managers, proprietary trading desks, and risk departments operating in these markets.
+At the same time, some extensions remain outside the current production scope, including full AER integration in an HJM-consistent framework and a fuller optimizer layer with richer forward-looking risk engines.
 
-\subsection{Innovation and Contribution}
-The core innovation of this work lies in its integrated, production‑oriented design with a focus on arbitrage identification in RUB/CNY markets. Unlike earlier studies that concentrate on individual modeling components or apply arbitrage‑free methods only to developed markets, the proposed system:
-\begin{itemize}
-    \item Synthesizes arbitrage detection methods—from parametric residuals to arbitrage‑regularized neural filters and regime‑switching DNS—into a single, operationally coherent pipeline for RUB and CNY;
-    \item Embeds explicit real‑world constraints—such as value‑at‑risk limits, liquidity thresholds, and transaction costs—directly into the optimization logic that consumes arbitrage signals; and
-    \item Provides a fully documented, reproducible workflow that can be systematically validated and maintained in a live environment.
-\end{itemize}
+\subsection{Structure of the report}
 
-
+The rest of the report is organized as follows. Section 2 positions the project relative to key literature strands. Section 3 describes implemented system design and module interfaces. Section 4 defines the validation protocol and interpretation rules. Section 5 summarizes evidence from exported artifacts with conservative claim governance. Section 6 discusses practical use, limits, and next steps. Section 7 concludes. Detailed diagnostics and extended tables are provided in appendices.
 
 \pagebreak
-\section{Literature Review}
 
-\subsection{Risk management and scenario evaluation}
-
-\textbf{Existing solutions:}
-\begin{itemize}[leftmargin=*, itemsep=0.3em]
-    \item \textbf{Monte Carlo scenario simulation}: simulation of a large number of market scenarios to approximate distributions of portfolio returns and derive risk metrics \cite{celestin2025}.
-    \item \textbf{Static vs.\ dynamic dependence}: comparison of static correlation with time-varying correlation models (e.g., DCC/GARCH-type ideas) to detect correlation regime shifts that weaken diversification \cite{vasuki2025}.
-    \item \textbf{ML-based risk prediction for portfolio improvement}: use of machine learning models to forecast returns and/or risk and improve risk-adjusted portfolio metrics \cite{uddin2025}.
-\end{itemize}
-
-\textbf{Gap in the literature:} Existing studies typically treat risk evaluation as a standalone component (risk reporting or isolated experiments). They rarely connect scenario engines, dependence monitoring, and portfolio decisions in one controlled workflow.
-
-\subsection{Analysis of central bank policies effect}
-
-\textbf{Existing solutions:}
-\begin{itemize}[leftmargin=*, itemsep=0.3em]
-    \item \textbf{LLM-based intent classification of policy text}: sentence-level classification across multiple dimensions and construction of indices that relate to market-rate dynamics \cite{silva2025}.
-    \item \textbf{Structural policy transmission modeling}: macroeconomic modeling to study how monetary-policy shocks and vulnerabilities shape spillovers \cite{ahmed2024}.
-    \item \textbf{Text/sentiment analytics as an input}: high-level use of sentiment and big-data analytics ideas in risk-assessment toolkits \cite{an2025}.
-\end{itemize}
-
-\textbf{Gap in the literature:} Text-based policy signals are studied separately from yield-curve modeling and portfolio optimization.
+\section{Analogue and Literature Positioning}
 
 \subsection{Yield curve modeling and borrowing-rate forecasting}
 
-\textbf{Parametric and classical approaches:}
-\begin{itemize}[leftmargin=*, itemsep=0.3em]
-    \item \textbf{Model selection for term-structure estimation}: choosing among parametric yield-curve families and Gaussian Process regression to represent turbulent term structures \cite{delucchi2025}.
-    \item \textbf{Predictive feature extraction and interpretability}: evidence that yield-curve slope is an important predictive feature, combined with Shapley-based interpretation for nonlinear models \cite{bluwstein2020}.
-\end{itemize}
+Recent work on interest-rate modeling shows that machine-learning methods can support nonlinear yield-curve estimation and forecasting \cite{delucchi2025, bluwstein2020}. Tree-based macroeconomic regime switching \cite{bie2025} combines DNS-style term-structure modeling with macro splits (for example, policy-rate and inflation regimes), improving interpretability of regime behavior. Arbitrage-aware filtering frameworks \cite{gao2025} incorporate HJM-consistent constraints and show that Arbitrage Error Regularization (AER) can improve short-end forecast and execution-relevant quality metrics.
 
-\textbf{Modern forecasting approaches (2024--2025):}
-\begin{itemize}[leftmargin=*, itemsep=0.3em]
-    \item \textbf{Tree-based macroeconomic regime switching} \cite{bie2025}: Bie, Diebold, He, and Li extend the dynamic Nelson--Siegel (DNS) model with decision trees that partition macroeconomic variables (e.g., federal funds rate, inflation) based on the DNS marginal likelihood. This yields economically interpretable regimes, unlike latent Markov-switching models. A key finding: macro variables have predictive power for the yield curve when policy rates are high, but not in low-rate regimes---refining the ``macro-spanning'' debate.
-    \item \textbf{Arbitrage-free neural filters under HJM} \cite{gao2025}: Gao and Hyndman combine Kalman, extended Kalman, and particle filters with LSTMs within an HJM-consistent framework. They introduce an arbitrage error regularization (AER) penalty during training. Empirically, AER yields the strongest gains at short maturities and 5-day-ahead forecasts, improving bid--ask hit rates and reducing dollar-denominated errors. The approach supports both yield-space and price-space forecasting.
-    \item \textbf{Distributionally robust ML combinations}: Recent work combines factor-augmented DNS with Random Forest for nonlinear interactions and distributionally robust forecast combinations that penalize tail risk. Adaptive combinations perform best at short horizons; Random Forest dominates at longer horizons.
-    \item \textbf{Attention-based and quantile deep learning}: Self-attention mechanisms with quantile regression produce interval forecasts while avoiding quantile crossing; ensemble and transfer-learning methods exploit cross-curve dependence in multi-currency settings.
-\end{itemize}
+\textbf{Gap.} Most yield-curve studies focus on forecast accuracy or monitoring quality rather than direct arbitrage-potential extraction from model residuals/spreads. Applications to RUB/CNY with explicit cross-currency and regime-aware decision layers remain limited relative to developed-market studies.
 
-\textbf{Gap in the literature:} Yield-curve estimation and yield-curve predictors are commonly evaluated for forecasting or monitoring tasks, but they are not consistently connected to downstream portfolio optimization under explicit VaR/variance constraints. Most state-of-the-art yield-curve forecasting is applied to U.S.\ Treasuries or major developed markets; applications to RUB/CNY with cross-currency and policy-regime considerations remain limited.
+\subsection{Risk management and scenario evaluation}
+
+Existing work covers Monte Carlo scenario engines for return-distribution estimation \cite{celestin2025}, static vs dynamic dependence diagnostics (including DCC/GARCH-type ideas) for regime shifts \cite{vasuki2025}, and ML-assisted risk prediction for risk-adjusted outcomes \cite{uddin2025}.
+
+\textbf{Gap.} Risk modules are frequently treated as standalone diagnostics rather than integrated controls linked to monthly signal gating, turnover/cost accounting, and final model routing in one reproducible pipeline.
 
 \subsection{Portfolio optimization and decision engines}
 
-\textbf{Existing solutions:}
-\begin{itemize}[leftmargin=*, itemsep=0.3em]
-    \item \textbf{Deep reinforcement learning for dynamic allocation}: formulation of a sequential allocation problem with risk-adjusted reward design (e.g., Sharpe-based rewards) \cite{huang2024}.
-    \item \textbf{Deployment-oriented AI portfolio systems}: transformer-based temporal modeling, DRL rebalancing, and Bayesian uncertainty modeling, with explicit implementation components \cite{suratwala2025}.
-    \item \textbf{FDR-controlled sparse selection}: statistically controlled selection under strong dependence, applied to sparse index tracking \cite{machkour2025}.
-    \item \textbf{Deep learning for allocation prediction}: forecasting portfolio weights and benchmarking against classical heuristics \cite{bertani2021}.
-    \item \textbf{ML-driven adaptive allocation under volatility}: comparison of ML/DRL approaches with classical models (e.g., Markowitz, Black--Litterman) \cite{olanrewaju2025}.
-    \item \textbf{Quantum optimization with feasibility review}: benchmarking quantum approaches and emphasizing expert feasibility review \cite{innan2025}.
+Portfolio decision-engine research includes DRL-based dynamic allocation with risk-adjusted rewards \cite{huang2024}, deployment-oriented AI portfolio stacks with temporal models and uncertainty control \cite{suratwala2025}, sparse selection under dependence \cite{machkour2025}, and ML-vs-classical allocation comparisons under volatility \cite{olanrewaju2025}.
+
+\textbf{Gap.} Many studies optimize decision engines in isolation and on different asset universes, without integrating policy/macro transmission inputs, yield-curve arbitrage diagnostics, and explicit cost-aware routing constraints in a single operational workflow.
+
+\subsection{This project's contribution}
+
+The contribution of this project is an implemented hybrid software+analytical system that focuses on arbitrage identification (parametric residuals and cross-currency spreads), enriches signals with ML opportunity/direction logic, and produces risk-aware routed decisions under explicit transaction-cost and governance constraints in the RUB/CNY fixed-income setting. By combining cross-currency spread logic, regime persistence handling, and conservative inference framing in one reproducible artifact pipeline, the project addresses a practical integration gap not directly covered by individual literature strands.
+
+\textbf{Section summary.} The literature supports each component separately; the project contribution is their integrated, auditable implementation for the RUB/CNY arbitrage workflow.
+
+\section{System Design and Implementation}
+
+\subsection{System rationale and architecture}
+
+The system is designed as a modular pipeline:
+\[
+\text{Data ingestion} \to \text{Feature/label construction} \to \text{Signal generation} \to \text{Regime-aware routing} \to \text{Backtest/inference artifacts}.
+\]
+This architecture supports reproducibility and selective replacement of components without rewriting the full workflow.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\small]
+  \node[draw, align=center, text width=2.5cm] (d) at (0,0) {Data sources\\CBR/MOEX/FRED\\AKShare/ChinaBond};
+  \node[draw, align=center, text width=2.3cm] (f) at (3.2,0) {Features\\and labels};
+  \node[draw, align=center, text width=2.3cm] (s) at (6.4,0) {Classical + ML\\signals};
+  \node[draw, align=center, text width=2.3cm] (r) at (9.6,0) {Regime +\\decision routers};
+  \node[draw, align=center, text width=2.5cm] (b) at (12.8,0) {Backtests +\\inference +\\exports};
+
+  \draw[->] (d) -- (f);
+  \draw[->] (f) -- (s);
+  \draw[->] (s) -- (r);
+  \draw[->] (r) -- (b);
+\end{tikzpicture}
+\caption{End-to-end software pipeline from ingestion to exported decision/backtest artifacts.}
+\label{fig:sys_pipeline}
+\end{figure}
+
+Figure~\ref{fig:sys_pipeline} summarizes how modules are chained in production scripts and notebooks. The architecture is intentionally linear at artifact boundaries, so each stage can be validated and replaced independently while preserving downstream contracts.
+
+\subsection{Implemented modules and interfaces}
+
+Core implemented components in the repository:
+\begin{itemize}
+\item \textbf{Data layer}: CBR, MOEX, FRED, AKShare, and manual ChinaBond ingestion into SQLite.
+\item \textbf{Forecasting layer}: Nelson--Siegel fitting, spread diagnostics, and baseline evaluation helpers.
+\item \textbf{Signal layer}: classical signals and ML signals with triple-barrier/meta-labeling and walk-forward logic.
+\item \textbf{Routing layer}: regime labels, persistence filtering, confidence-weighted selection, reason-coded no-trade logic.
+\item \textbf{Evaluation layer}: classical/ML/regime/unified backtests with cost, turnover, and inference outputs.
+\item \textbf{Demo layer}: notebook run-control and dashboard flow for reproducible demonstration.
 \end{itemize}
 
-\textbf{Gap in the literature:} Many allocation studies optimize a decision engine in isolation (often on equities or synthetic universes) and do not integrate policy-intent signals, yield-curve forecasting, and VaR/variance constraints into a unified, reproducible workflow.
+\subsection{ML model stack and labeling design}
 
-\subsection{Overall gap and contribution}
+The implemented ML stack combines four direction classifiers at each walk-forward step: \texttt{LogisticRegression}, \texttt{RandomForestClassifier}, calibrated \texttt{RidgeClassifier}, and \texttt{HistGradientBoostingClassifier}. Their probabilities are aggregated into \texttt{proba\_ensemble}, while opportunity probability is modeled separately and combined into final long/short probabilities (\texttt{proba\_final\_long}, \texttt{proba\_final\_short}) before thresholding.
 
-Across the reviewed papers, contributions are typically specialized (communication signals, yield-curve modeling, risk estimation, or allocation engines). The main gap is the limited availability of end-to-end, operationally validated workflows that combine arbitrage identification with portfolio decisions under a single governance framework, especially for RUB/CNY markets. The contribution of the present work is a modular system that (i)~focuses on arbitrage opportunities identification as the core deliverable, (ii)~supports controlled experimentation with alternative arbitrage-detection methods (parametric, AER-based, regime-switching, cross-currency), and (iii)~produces portfolio decisions under explicit risk constraints in the RUB/CNY fixed-income setting.
+Target construction uses triple-barrier labeling on monthly return differentials with configured take-profit, stop-loss, and maximum holding horizon. From these labels, meta-targets are built as \texttt{target\_opportunity} and conditional \texttt{target\_direction}. This two-stage target design separates ``whether to trade'' from ``which direction to trade'' in the training pipeline.
 
-\pagebreak
+To reduce leakage risk in model validation, the implementation records a purged/embargo split scheme (\texttt{purged\_embargo\_kx\_embn}) and removes training observations around each test block according to the embargo window.
 
-\section{Problem formulation and goals}
+\subsection{Versioning and schema governance}
 
-\subsection{Chosen focus: arbitrage opportunities identification}
+The signal stack exposes explicit artifact versions via \texttt{run\_id\_prefix}, \texttt{label\_version}, \texttt{router\_policy\_version}, and \texttt{feature\_block\_version}. Decision artifacts carry these tags so analytical comparisons remain traceable to a specific labeling/routing/feature policy revision.
 
-The project adopts \textbf{arbitrage opportunities identification} as its narrow research direction. This choice is motivated by:
-\begin{itemize}[leftmargin=*, itemsep=0.3em]
-    \item \textbf{Alignment with the project title}: The title explicitly references ``Arbitrage Potential''; arbitrage identification is the central deliverable.
-    \item \textbf{Data availability}: CBR key rate, Russian and Chinese bond yields, and macroeconomic indicators support modeling of yield-curve dynamics and cross-currency relationships.
-    \item \textbf{Literature support}: \cite{gao2025} provide an arbitrage error regularization (AER) framework that improves forecast consistency at short maturities; \cite{bie2025} offer regime-switching DNS with interpretable macro regimes. Both directly inform deviation detection.
-    \item \textbf{Interpretability and downstream use}: Deviation and spread indicators are interpretable and can feed into the portfolio-construction layer as signals.
+Schema regression checks are implemented for core outputs. The guard validates both file presence and required columns for \texttt{ml\_signals.csv}, \texttt{ml\_signals\_decisions.csv}, \texttt{regime\_router\_decisions.csv}, and \texttt{unified\_backtest\_summary.csv}. This prevents silent contract drift between scripts, notebooks, and report tables.
+
+\subsection{Reproducibility and artifact governance}
+
+The implementation uses exported CSV/TEX artifacts for traceability, schema checks for regression protection, and a cache/run-control notebook for fast demo vs full recomputation modes. This report references only repository artifacts generated by these scripts.
+
+\textbf{Section summary.} The software system is implemented as a reproducible, modular pipeline with explicit artifact contracts and demonstrable operation.
+
+\section{Analytical Validation Methodology}
+
+\subsection{Data coverage and constraints}
+
+The system uses monthly-aligned time series from implemented sources. Coverage is strongest for Russian policy/curve data (CBR key rate: 2013--2026; CBR G-curve: 2015--2026; MOEX OFZ yields: 2019--2026) and global macro proxies from FRED (2015--2026). PBOC LPR is available from 1991--2026, while Chinese bond yields from AKShare are limited to approximately 12 months and are supplemented by manual ChinaBond files. Russian macro coverage from FRED is partial and ends in 2022-03.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\small]
+  \node[draw, align=center, text width=2.8cm] (c1) at (0,0) {Constraints\\short CN history\\leakage risk\\cost sensitivity};
+  \node[draw, align=center, text width=3.2cm] (c2) at (4.4,0) {Design choices\\NS + spreads\\triple-barrier + meta labels\\purged/embargo CV\\confidence/edge gating};
+  \node[draw, align=center, text width=3.0cm] (c3) at (8.8,0) {Expected effects\\interpretability\\lower leakage risk\\more robust decisions};
+  \draw[->] (c1) -- (c2);
+  \draw[->] (c2) -- (c3);
+\end{tikzpicture}
+\caption{Method-choice rationale: constraints translated into implemented design choices.}
+\label{fig:method_choice}
+\end{figure}
+
+Figure~\ref{fig:method_choice} links practical constraints to implemented modeling choices.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\small]
+  \node[draw, align=center, text width=2.6cm] (r0) at (0,0) {Monthly\\return differential};
+  \node[draw, align=center, text width=2.8cm] (r1) at (3.5,0) {Triple barrier\\TP / SL / time};
+  \node[draw, align=center, text width=3.0cm] (r2) at (7.2,0) {Meta targets\\target\_opportunity\\target\_direction};
+  \node[draw, align=center, text width=3.2cm] (r3) at (11.4,0) {Purged/embargo CV\\remove samples around\\test folds};
+  \draw[->] (r0) -- (r1);
+  \draw[->] (r1) -- (r2);
+  \draw[->] (r2) -- (r3);
+\end{tikzpicture}
+\caption{Labeling and validation schema for leakage-aware ML training.}
+\label{fig:label_cv}
+\end{figure}
+
+Figure~\ref{fig:label_cv} summarizes the implemented labeling and leakage-control logic.
+
+\subsection{Methods under comparison}
+
+Evaluation uses implemented strategy families already exported by the project scripts:
+\begin{itemize}
+\item classical signal family (panel/spread-based);
+\item ML signal family (ensemble and base learners);
+\item regime-aware routing and unified strategy layer.
 \end{itemize}
 
-\textbf{Scope of arbitrage identification}: The work will target (i)~\emph{within-curve} deviations---model-implied vs.\ observed yields or spreads that violate no-arbitrage within a single currency (e.g., Russian or Chinese yield curves); and (ii)~\emph{cross-currency} relative-value misalignments---systematic spreads or shape differences between RUB and CNY curves that may indicate cross-market opportunities or stress. These signals will be connected to the portfolio optimizer under explicit risk constraints.
+\subsection{Metrics, inference, and robustness protocol}
 
-\pagebreak
+The protocol uses out-of-sample backtest summaries, cost and turnover accounting, and inference artifacts (bootstrap confidence intervals and paired tests). Reliability and robustness are evaluated with calibration bins, stability grids, and regime-cell diagnostics already exported as tables.
 
-\section{Data collection and preparation approach}
+\subsection{Reliability, stability, and drift reading rules}
 
-\pagebreak
+Reliability is read from calibration bins by comparing predicted probability means (\texttt{p\_mean}) with observed event rates (\texttt{y\_rate}); small calibration gaps indicate better probability alignment. Stability is read from threshold-grid outputs (\texttt{active\_pct}, flip proxy): large swings in activity or frequent sign flips under small threshold changes indicate fragile signal behavior.
 
-\section{Statistical analysis}
+Drift monitoring is reported through PSI in \texttt{ml\_signals\_drift.csv}. The implementation flags \texttt{alert=1} when PSI reaches the configured warning threshold (\(\text{PSI} \ge 0.25\)); below-threshold values are treated as monitoring signals, not immediate policy-change triggers.
 
-\pagebreak
+\textbf{Section summary.} Validation is performed on repository-exported artifacts with consistent economic, statistical, and robustness lenses.
 
-\section{Approach exploration}
+\section{Results and Evidence Synthesis}
 
-This section outlines the set of approaches to try in order to identify the best method for arbitrage detection in the RUB/CNY setting. The exploration is structured from simpler, interpretable baselines to more advanced machine-learning methods.
+\subsection{Forecast and spread diagnostics}
 
-\subsection{Approaches to compare}
+Baseline curve diagnostics show moderate fit quality with term-structure heterogeneity. For RU maturities, RMSE ranges from 0.0575 (6M) to 0.2416 (30Y). For CN maturities, RMSE ranges from 0.0271 (15Y) to 0.1373 (10Y). Spread abnormality flags ($Z>2$) are non-trivial across the curve: counts range from 5 (2Y and 5Y) to 11 (3M), indicating repeated dislocations used by downstream signal logic.
 
-\begin{enumerate}[leftmargin=*, itemsep=0.5em]
-    \item \textbf{Parametric yield-curve residuals (baseline)}:
-    \begin{itemize}[leftmargin=*, itemsep=0.2em]
-        \item Fit Nelson--Siegel or Svensson curves to observed yields for RUB and CNY separately; compute residuals (observed minus fitted) at each maturity and date.
-        \item Use residuals as a proxy for arbitrage deviation: large or persistent residuals at specific maturities suggest model failure or potential mispricing.
-        \item \textit{Pros}: Simple, interpretable, no ML. \textit{Cons}: Does not impose no-arbitrage; residuals may reflect model misspecification rather than arbitrage.
-    \end{itemize}
-    \item \textbf{Arbitrage error regularization (AER) \`a la Gao \& Hyndman} \cite{gao2025}:
-    \begin{itemize}[leftmargin=*, itemsep=0.2em]
-        \item Implement a DNS-style model within an HJM-like setting; add an AER penalty (accumulated excess return over a tenor grid) to the training objective.
-        \item Train with and without AER; compare forecast errors and the magnitude of AER as an ex-post diagnostic.
-        \item \textit{Pros}: Theoretically grounded; AER directly measures deviation from no-arbitrage. \textit{Cons}: Requires differentiable filters (KF/EKF) and may need adaptation for sparse RUB/CNY data.
-    \end{itemize}
-    \item \textbf{Tree-based regime-switching DNS \`a la Bie et al.} \cite{bie2025}:
-    \begin{itemize}[leftmargin=*, itemsep=0.2em]
-        \item Partition the sample by macro variables (e.g., CBR key rate, PBoC LPR, inflation) using a decision tree grown to maximize DNS marginal likelihood.
-        \item Estimate DNS parameters separately in each regime; compare implied vs.\ observed yields within and across regimes.
-        \item \textit{Pros}: Interpretable regimes; captures policy-rate and macro dependence. \textit{Cons}: Requires sufficient data per regime; Bayesian implementation can be heavy.
-    \end{itemize}
-    \item \textbf{Cross-currency relative-value indicators}:
-    \begin{itemize}[leftmargin=*, itemsep=0.2em]
-        \item Construct spread series: e.g., RUB minus CNY yields at matched maturities (after FX adjustment if applicable), or level/slope/curvature differences.
-        \item Apply simple rules (e.g., Z-score thresholds) or a univariate model to flag abnormal spreads.
-        \item \textit{Pros}: Directly targets RUB--CNY interdependence. \textit{Cons}: Choice of matched maturities and FX treatment is crucial; may need CIP-based adjustments.
-    \end{itemize}
-    \item \textbf{Neural / ML augmentation (optional extension)}:
-    \begin{itemize}[leftmargin=*, itemsep=0.2em]
-        \item If data and compute allow: LSTM-augmented filters for time-varying parameters, or a hybrid DNS + Random Forest for residual prediction.
-        \item \textit{Pros}: Can capture nonlinearities. \textit{Cons}: Risk of overfitting; less interpretable.
-    \end{itemize}
+\subsection{Integrated performance and inference}
+
+At the unified headline level, the classical strategy versus naive benchmark remains weak (annual return -0.0040, Sharpe -0.3133, max drawdown -0.0605). The ML strategy versus passive spread benchmark is economically better in this sample (annual return 0.0025, Sharpe 0.1463, excess annual return 0.0195, Sharpe delta 0.9568), but statistical confidence remains limited in aggregate tests.
+
+Transaction-cost and turnover diagnostics indicate a clear aggressiveness gap: the classical strategy has annual turnover 0.4391 with total cost drag 0.001756, while the ML strategy has annual turnover 4.8000 with total cost drag 0.007000. Active participation is lower for the ML strategy (active percentage 0.5143), consistent with confidence/edge gating.
+
+Inference summary stays conservative: strategy\_vs\_naive has paired-test p-value 0.3082 and mean-difference CI [-0.000215, 0.000062]; ml\_strategy\_vs\_passive has p-value 0.2987 and CI [-0.001342, 0.004706]. Both intervals cross zero, so headline economic improvement is treated as conditional, not statistically firm.
+
+\subsection{Regime-dependent evidence}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\small]
+  \node[draw, align=center, text width=3.0cm] (g0) at (0,0) {Spread/slope\\macro/FX inputs};
+  \node[draw, align=center, text width=3.3cm] (g1) at (4.0,0) {Rule regimes\\R1/R3/R4\\M1/M5/C1};
+  \node[draw, align=center, text width=3.1cm] (g2) at (8.2,0) {Markov states\\ms\_state\\ms\_state\_persist};
+  \node[draw, align=center, text width=3.2cm] (g3) at (12.4,0) {Lagged labels\\*\_lag1 used by\\decision routing};
+  \draw[->] (g0) -- (g1);
+  \draw[->] (g1) -- (g2);
+  \draw[->] (g2) -- (g3);
+\end{tikzpicture}
+\caption{Regime-shifting process from feature inputs to lagged routing labels.}
+\label{fig:regime_process}
+\end{figure}
+
+Figure~\ref{fig:regime_process} shows how rule and Markov states become lagged routing inputs.
+
+Regime diagnostics show uneven sample support across cells. In broader cells (for example, \texttt{regime\_R1} high-spread with 58 observations and \texttt{ms\_state\_persist} low with 51 observations), ML ensemble economic deltas are positive in several cases, but many confidence intervals remain wide. One notable statistically significant regime-cell example is \texttt{ML\_LOGIT\_vs\_PASSIVE\_SPREAD} in \texttt{ms\_state\_persist = MS\_low} (paired-test p-value 0.0399), while most other regime comparisons remain non-significant and are interpreted as exploratory or economically promising only.
+
+The regime taxonomy used by the system includes \texttt{R1/R3/R4} (spread and shape regimes), \texttt{M1/M5} (macro/FX-conditioned regimes), composite \texttt{C1} states, and Markov-smoothed states (\texttt{ms\_state}, \texttt{ms\_state\_persist}). For trading causality discipline, these labels are used in lagged form (\texttt{*\_lag1}), so month-\(t\) decisions consume month-\(t-1\) regime information.
+
+\subsection{Router, reliability, and stability evidence}
+
+Operational router evidence indicates active no-trade governance in low-confidence/low-edge conditions (dominant reason codes are confidence/edge related in several regime cells). Reliability and stability artifacts show that conclusions depend on threshold and cost assumptions; therefore these diagnostics are used to support robustness discussion, not as standalone profitability proof.
+
+In the implemented confirmation logic, \texttt{trade\_enabled=0} is triggered by five explicit condition families: neutral model output, insufficient confidence, low expected net edge, disagreement with aggregated classical direction, and stress-regime conflict. These conditions are surfaced via \texttt{reason\_code}/\texttt{why\_not\_trade} for operator auditability.
+
+Reliability/stability/drift artifacts are tied directly to claim strength: stable calibration plus low sensitivity and no major drift alerts support ``methodologically supported'' process claims, while economically positive but unstable/drift-sensitive outputs remain ``promising'' or ``exploratory'' in this report.
+
+\subsection{Claim policy and interpretation}
+
+To keep claims conservative and traceable, headline conclusions are tagged as:
+\begin{itemize}
+    \item \textbf{Supported by statistical evidence}: robust under inference and sensitivity checks.
+    \item \textbf{Economically promising but not statistically strong}: positive economic metrics with weak/non-significant inference.
+    \item \textbf{Exploratory / not used for headline claims}: diagnostics used for development decisions.
+\end{itemize}
+
+Using the exported artifacts above, methodological validity (reproducible routing diagnostics, calibration and stability reporting) is supported. Economic value is conditional on sample, cost, and threshold assumptions. Strong claims of invariant profitability across all settings are not supported by the available evidence.
+
+\textbf{Section summary.} Repository-backed artifacts support a conservative conclusion: the system is methodologically mature and economically promising under constraints, with inference caveats explicitly retained.
+
+\section{Practical Use, Limits, and Further Work}
+
+\subsection{Practical use in operator/research workflow}
+
+The implemented workflow is designed for analyst/operator use rather than consumer UI. It provides:
+\begin{itemize}
+\item reproducible run control (cached vs full-chain mode);
+\item monthly decision transparency via \texttt{selected\_model}, \texttt{confidence}, \texttt{expected\_net\_edge}, \texttt{reason\_code}, \texttt{no\_trade};
+\item integrated reporting artifacts for review and defense.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\small]
+  \node[draw, align=center, text width=2.6cm] (o0) at (0,0) {\texttt{selected\_model}};
+  \node[draw, align=center, text width=2.6cm] (o1) at (3.1,0) {\texttt{confidence}\\+\texttt{expected\_net\_edge}};
+  \node[draw, align=center, text width=2.9cm] (o2) at (6.8,0) {Checks\\agreement\\regime conflict};
+  \node[draw, align=center, text width=2.9cm] (o3) at (10.6,0) {\texttt{trade\_enabled}\\\texttt{reason\_code}\\\texttt{no\_trade}};
+  \node[draw, align=center, text width=2.9cm] (o4) at (14.3,0) {\texttt{decision\_family}\\\texttt{unified\_router\_decisions.csv}};
+  \draw[->] (o0) -- (o1);
+  \draw[->] (o1) -- (o2);
+  \draw[->] (o2) -- (o3);
+  \draw[->] (o3) -- (o4);
+\end{tikzpicture}
+\caption{Monthly operator decision workflow from model selection to final merged decision artifact.}
+\label{fig:operator_flow}
+\end{figure}
+
+At the integration layer, \texttt{unified\_router\_decisions.csv} is the final merged decision artifact combining regime-router decisions and ML-gate decisions, with \texttt{decision\_family} labels for source attribution.
+
+\subsection{Limits}
+
+The main repository-backed limits are: finite sample size, regime sparsity in some cells, sensitivity to thresholds/cost assumptions, and remaining model risk from feature/proxy design. These limits require conservative interpretation of profitability claims.
+
+\subsection{Further work}
+
+Priority extensions already identified in project artifacts and scripts:
+\begin{enumerate}[leftmargin=*, itemsep=0.4em]
+    \item extend baseline forecasting variants and cross-currency feature engineering;
+    \item implement and benchmark full AER and richer regime alternatives;
+    \item enhance risk engine and constrained optimizer layer;
+    \item continue artifact governance and drift/stability monitoring.
 \end{enumerate}
 
-\subsection{Evaluation protocol}
+\textbf{Section summary.} The system is demonstrable and useful for controlled decision support, with clearly bounded claims and concrete extension priorities.
 
-To compare approaches and select the best one, the following will be used:
-\begin{itemize}[leftmargin=*, itemsep=0.3em]
-    \item \textbf{Forecast accuracy}: MAE, RMSE (and optionally hit rates within bid--ask) for yields at key maturities, at 1-step and multi-step horizons.
-    \item \textbf{Arbitrage diagnostic}: Magnitude and persistence of AER or residual-based deviation metrics; stability across regimes and sub-periods.
-    \item \textbf{Signal interpretability}: Ease of explaining identified deviations (e.g., ``level too high in Regime 2'') and mapping them to macro/policy events.
-    \item \textbf{Operational feasibility}: Computational cost, data requirements, and robustness to missing or noisy observations.
-\end{itemize}
+\section{Conclusion}
 
-\pagebreak
+This coursework delivers an implemented hybrid software+analytical system for RUB/CNY relative-value analysis and strategy routing. The software contribution is an integrated, reproducible pipeline with explicit artifact governance. The analytical contribution is a consistent evidence framework combining performance, inference, regime diagnostics, and reliability/stability checks.
 
-\section{Plan of Further Work}
-
-\begin{enumerate}[leftmargin=*, itemsep=0.5em]
-    \item \textbf{Data preparation}: Collect and align market data (CBR key rate, Russian bond yields, Chinese bond yields, macro), central bank communications, and FX rates. Address frequency mismatch, missing values, and calendar alignment. Document available maturities and date ranges per series.
-    \item \textbf{Baseline implementation}: Implement parametric NS/Svensson fitting for RUB and CNY curves; compute and analyze residuals. Establish a simple residual-based deviation metric as the first arbitrage proxy.
-    \item \textbf{AER-based approach}: Implement or adapt the AER framework \cite{gao2025} (or a simplified version) for RUB and/or CNY. Compare forecasts and AER magnitude with and without regularization. Assess feasibility given data sparsity.
-    \item \textbf{Regime-switching approach}: Implement or adapt tree-based macro regime detection \cite{bie2025} (or a simplified Markov-switching or quantile-split alternative). Estimate DNS per regime; compare implied vs.\ observed yields and evaluate regime stability.
-    \item \textbf{Cross-currency indicators}: Construct RUB--CNY spread series at matched maturities; apply deviation detection (e.g., Z-scores, rolling thresholds). Validate against known policy or stress events.
-    \item \textbf{Comparative evaluation}: Run all approaches on the same out-of-sample window; report forecast accuracy, arbitrage metrics, and interpretability. Select 1--2 best-performing configurations.
-    \item \textbf{Integration with portfolio layer}: Feed selected arbitrage signals (deviations, spreads, regime labels) into the portfolio optimizer; re-evaluate performance under risk constraints and transaction costs.
-    \item \textbf{Documentation}: Document assumptions, model choices, validation results, and monitoring procedures for reproducibility and operational use.
-\end{enumerate}
+Based on repository artifacts, methodological quality is supported, economic potential is conditional, and strong universal profitability claims are not warranted. The project is suitable for controlled pilot use and further method/optimizer extensions.
 
 \pagebreak
 \printbibliography[heading=bibintoc, title={References}]
@@ -283,11 +393,93 @@ To compare approaches and select the best one, the following will be used:
 \appendix
 
 \section{Glossary}
+\label{sec:glossary}
+
+\begin{description}[nosep]
+\item[CBR key rate] Policy rate set by the Bank of Russia.
+\item[G-curve] Zero-coupon government bond yield curve published by the CBR.
+\item[OFZ] Russian federal loan bonds.
+\item[CGB] Chinese government bonds.
+\item[LPR] Loan Prime Rate; benchmark lending rate set by the PBOC.
+\item[IRS] Interest rate swap.
+\item[VaR] Value at Risk.
+\item[Nelson--Siegel (NS)] Parametric yield-curve model with level, slope, and curvature factors.
+\item[Svensson] Extended NS model with an additional curvature term.
+\item[AER] Arbitrage Error Regularization.
+\item[DNS] Dynamic Nelson--Siegel.
+\item[HJM] Heath--Jarrow--Morton framework.
+\item[Regime switching] Models that allow parameters to change across distinct regimes.
+\item[Sharpe ratio] Risk-adjusted return (excess return per unit of volatility).
+\end{description}
 
 \section{Data description}
+\label{sec:data_desc}
+
+Database table structure and date ranges are maintained in project artifacts and pipeline views (\texttt{combined\_monthly} and base source tables). This appendix section is kept concise to avoid duplicating schema text from operational documentation.
 
 \section{Statistical analysis results}
+\label{sec:stat_results}
+
+Extended statistical diagnostics used as supporting evidence:
+\input{tables/tab_5_1_descriptive}
+\input{tables/tab_5_2_adf}
+\input{tables/tab_5_3_coint}
+\input{tables/tab_5_4_granger}
+\input{tables/tab_5_5_var}
+\input{tables/tab_5_6_ols}
 
 \section{Approach evaluation}
+\label{sec:approach_eval}
+
+Supplementary model-comparison artifacts:
+\input{tables/tab_6_1_ns_metrics}
+\input{tables/tab_6_2_abnormal}
+\input{tables/tab_6_3_model_comparison_ru}
+\input{tables/tab_6_3_model_comparison_cn}
+\input{tables/tab_6_3_model_comparison_best_model}
+\input{tables/tab_6_4_advanced_methods}
+
+\input{tables/tab_7_1_strategy_performance}
+\input{tables/tab_7_2_cost_and_turnover}
+\input{tables/tab_7_3_significance_tests}
+\input{tables/tab_7_4_regime_counts}
+\input{tables/tab_7_5_regime_performance}
+\input{tables/tab_7_6_regime_significance}
+\input{tables/tab_7_7_router_decisions}
+\input{tables/tab_7_8_ml_reliability}
+\input{tables/tab_7_9_ml_stability}
+
+\subsection{Governance notes for reproducibility}
+
+\textbf{Schema-checked artifacts and key columns.}
+\begin{itemize}
+    \item \texttt{ml\_signals.csv}: includes probability and final-signal columns (\texttt{proba\_ensemble}, \texttt{ml\_signal}, \texttt{proba\_opportunity}, \texttt{proba\_final\_long}, \texttt{proba\_final\_short}).
+    \item \texttt{ml\_signals\_decisions.csv}: includes operator fields (\texttt{selected\_model}, \texttt{trade\_enabled}, \texttt{confidence}, \texttt{expected\_net\_edge}, \texttt{reason\_code}).
+    \item \texttt{regime\_router\_decisions.csv}: includes regime-cell routing outputs with \texttt{no\_trade}.
+    \item \texttt{unified\_backtest\_summary.csv}: includes strategy-level metrics and \texttt{family} attribution.
+\end{itemize}
+
+\textbf{Drift fields monitored by PSI.}
+PSI tracking is computed for \texttt{proba\_ensemble}, \texttt{proba\_opportunity}, \texttt{model\_proba\_max}, \texttt{ret\_diff\_lag1}, and \texttt{carry\_proxy}, with \texttt{alert=1} when the configured threshold is exceeded.
+
+\textbf{Version fields in decision artifacts.}
+Decision exports include \texttt{run\_id}, \texttt{label\_version}, and \texttt{router\_policy\_version}; feature policy versioning is defined centrally via \texttt{feature\_block\_version} in signal configuration metadata.
+
+\subsection{Diagram-to-artifact mapping}
+
+\begin{itemize}
+    \item \textbf{Figure~\ref{fig:sys_pipeline}} maps to script chain outputs and consolidated artifacts consumed by report/notebook layers.
+    \item \textbf{Figure~\ref{fig:method_choice}} maps design choices to implemented modules in \texttt{src/signals} and \texttt{src/forecasting}.
+    \item \textbf{Figure~\ref{fig:label_cv}} maps to \texttt{triple\_barrier\_labels}, \texttt{make\_meta\_direction\_targets}, and purge/embargo split logic.
+    \item \textbf{Figure~\ref{fig:regime_process}} maps to rule regimes (\texttt{R1/R3/R4/M1/M5/C1}) and Markov/persistence outputs in regime-label artifacts.
+    \item \textbf{Figure~\ref{fig:operator_flow}} maps to decision fields in \texttt{ml\_signals\_decisions.csv}, \texttt{regime\_router\_decisions.csv}, and \texttt{unified\_router\_decisions.csv}.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\textwidth]{tables/tab_6_3_model_comparison_avg_rmse.png}
+\caption{Average OOS RMSE comparison from exported model-comparison artifacts.}
+\label{fig:app_6_3_avg_rmse}
+\end{figure}
 
 \end{document}

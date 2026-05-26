@@ -23,37 +23,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.forecasting.loaders import (
     load_russian_yield_curve,
     load_chinese_yield_curve,
+    load_currency_rates,
 )
 from src.signals.spread_signals import compute_spread_signals
 from src.signals.cip import compute_cip_deviation
 from src.signals.factor_signals import compute_factor_signals
-
-try:
-    from config import DB_PATH
-except ImportError:
-    DB_PATH = Path(__file__).resolve().parent.parent / "bond_rates_database.db"
-
-try:
-    from src.database import DatabaseManager
-except ImportError:
-    DatabaseManager = None
-
-
-def _load_currency_rates(start_date=None, end_date=None) -> pd.DataFrame:
-    if DatabaseManager is None:
-        return pd.DataFrame()
-    db = DatabaseManager(str(DB_PATH))
-    df = db.load_dataframe("currency_rates")
-    if df.empty or "date" not in df.columns:
-        return pd.DataFrame()
-    df = df.copy()
-    df["date"] = pd.to_datetime(df["date"])
-    if start_date:
-        df = df[df["date"] >= pd.to_datetime(start_date)]
-    if end_date:
-        df = df[df["date"] <= pd.to_datetime(end_date)]
-    return df.set_index("date")
-
 
 def _section(title: str):
     print(f"\n{'='*65}")
@@ -62,9 +36,7 @@ def _section(title: str):
 
 
 def _safe_console(text: str) -> str:
-    """
-    Return a console-safe string for terminals that cannot encode unicode arrows.
-    """
+    """Return a console-safe string for terminals with limited Unicode support."""
     try:
         text.encode(sys.stdout.encoding or "utf-8")
         return text
@@ -73,12 +45,7 @@ def _safe_console(text: str) -> str:
 
 
 def _compute_stability_diagnostics(df: pd.DataFrame, signal_cols: list) -> pd.DataFrame:
-    """
-    Compute simple stability diagnostics:
-    - persistence: fraction of months where signal equals previous non-zero signal
-    - flip_rate: non-zero sign changes divided by non-zero observations
-    - active_pct: share of periods with active signal
-    """
+    """Compute active share, persistence, and flip rate for each signal column."""
     rows = []
     for col in signal_cols:
         s = df[col].fillna(0).astype(int)
@@ -156,7 +123,7 @@ def main():
     print("Loading yield curves and FX data...")
     ru_yields = load_russian_yield_curve(args.start_date, args.end_date)
     cn_yields = load_chinese_yield_curve(args.start_date, args.end_date)
-    fx_rates  = _load_currency_rates(args.start_date, args.end_date)
+    fx_rates  = load_currency_rates(args.start_date, args.end_date)
 
     print(f"  RU: {len(ru_yields)} obs   CN: {len(cn_yields)} obs   FX: {len(fx_rates)} obs")
 
@@ -164,9 +131,6 @@ def main():
         print("Insufficient yield data. Run the pipeline first.")
         return 1
 
-    # ------------------------------------------------------------------
-    # 1. Spread signals
-    # ------------------------------------------------------------------
     _section("SPREAD SIGNALS  (RU yield - CN yield,  rolling z-score)")
     spread_result = compute_spread_signals(
         ru_yields, cn_yields,
@@ -183,9 +147,6 @@ def main():
         print(f"\n  Active signal history (last 12 non-zero months):")
         _print_signal_history(spread_result.signals, sig_cols)
 
-    # ------------------------------------------------------------------
-    # 2. CIP deviation signals
-    # ------------------------------------------------------------------
     _section("CIP DEVIATION SIGNALS  (yield diff - annualised FX change)")
     if fx_rates.empty:
         print("  No FX data available.")
@@ -203,7 +164,6 @@ def main():
             sig_cols = [c for c in cip_result.signals.columns if c.startswith("cip_signal_")]
             z_cols   = [c for c in cip_result.signals.columns if c.startswith("cip_z_")]
             print(f"  Maturities: {cip_result.maturities}")
-            # Latest FX premium
             if not cip_result.fx_premium.empty:
                 fp_latest = cip_result.fx_premium.iloc[-1]
                 fp_date   = cip_result.fx_premium.index[-1].strftime("%Y-%m")
@@ -213,9 +173,6 @@ def main():
             _print_signal_history(cip_result.signals, sig_cols)
             cip_result_signals = cip_result.signals
 
-    # ------------------------------------------------------------------
-    # 3. Factor divergence signals
-    # ------------------------------------------------------------------
     _section("FACTOR DIVERGENCE SIGNALS  (VAR residuals on NS factors)")
     factor_result = compute_factor_signals(
         ru_yields, cn_yields,
@@ -237,9 +194,6 @@ def main():
             display.index = display.index.strftime("%Y-%m")
             print(display.to_string())
 
-    # ------------------------------------------------------------------
-    # 4. Consolidated summary
-    # ------------------------------------------------------------------
     _section("CONSOLIDATED LATEST SIGNALS")
     rows = []
     timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -339,9 +293,6 @@ def main():
         diagnostics = pd.DataFrame()
         print("  No diagnostics available.")
 
-    # ------------------------------------------------------------------
-    # 5. Optional CSV export
-    # ------------------------------------------------------------------
     if args.save_csv:
         frames = []
         if not spread_result.signals.empty:

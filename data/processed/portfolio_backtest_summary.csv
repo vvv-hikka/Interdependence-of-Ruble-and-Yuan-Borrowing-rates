@@ -1,4 +1,0 @@
-strategy,ann_sharpe,max_drawdown,var95_empirical,mean_return
-strategy,-0.2907,-0.0521,0.0053,-0.000262
-naive_50_50,-0.2907,-0.0521,0.0053,-0.000262
-disconnected_60_40,-0.3354,-0.0633,0.0063,-0.000358

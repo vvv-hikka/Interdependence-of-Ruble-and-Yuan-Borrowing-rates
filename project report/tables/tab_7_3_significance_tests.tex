@@ -1,0 +1,49 @@
+\begin{table}
+\caption{Strategy significance tests}
+\label{tab:7_3}
+\begin{tabular}{lrrrrrrrrrrllll}
+\toprule
+comparison & mean_return_diff & mean_diff_ci_low & mean_diff_ci_high & sharpe_diff & sharpe_diff_ci_low & sharpe_diff_ci_high & paired_t_stat & paired_t_pvalue & n_obs & cost_bps & family & regime_id & regime_cell & model_id \\
+\midrule
+strategy_vs_naive_50_50 & -0.000074 & -0.000215 & 0.000062 & -0.022633 & -0.095669 & 0.058862 & -1.024579 & 0.308164 & 96 & 5.000000 & classical & NaN & NaN & NaN \\
+ml_strategy_vs_passive & 0.001624 & -0.001342 & 0.004706 & 0.956836 & -0.912522 & 3.000375 & 1.055266 & 0.298745 & 35 & 5.000000 & ml & NaN & NaN & NaN \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.000918 & -0.000241 & 0.002275 & 0.120407 & -0.335717 & 0.732331 & 1.421749 & 0.160548 & 58 & 5.000000 & regime_router & regime_R1 & R1_high_spread & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.000918 & -0.000241 & 0.002275 & 0.120407 & -0.335717 & 0.732331 & 1.421749 & 0.160548 & 58 & 5.000000 & regime_router & regime_R1 & R1_high_spread & CL_SPREAD \\
+ML_ENS_vs_PASSIVE_SPREAD & 0.001624 & -0.001342 & 0.004706 & 0.956836 & -0.912522 & 3.000375 & 1.055266 & 0.298745 & 35 & 5.000000 & regime_router & regime_R1 & R1_high_spread & ML_ENS \\
+ML_LOGIT_vs_PASSIVE_SPREAD & 0.000088 & -0.002540 & 0.002857 & 0.009454 & -1.611393 & 1.678781 & 0.063925 & 0.949405 & 35 & 5.000000 & regime_router & regime_R1 & R1_high_spread & ML_LOGIT \\
+ML_RF_vs_PASSIVE_SPREAD & 0.001068 & -0.002271 & 0.004544 & 0.595097 & -1.483247 & 2.700249 & 0.614015 & 0.543292 & 35 & 5.000000 & regime_router & regime_R1 & R1_high_spread & ML_RF \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.000040 & -0.001102 & 0.001223 & 0.451347 & -0.484709 & 1.437507 & 0.066976 & 0.947180 & 24 & 5.000000 & regime_router & regime_R1 & other & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.000040 & -0.001102 & 0.001223 & 0.451347 & -0.484709 & 1.437507 & 0.066976 & 0.947180 & 24 & 5.000000 & regime_router & regime_R1 & other & CL_SPREAD \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.001200 & -0.000794 & 0.002882 & 1.788708 & -1.299119 & 7.486550 & 1.205519 & 0.249488 & 14 & 5.000000 & regime_router & regime_R1 & R1_low_spread & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.001200 & -0.000794 & 0.002882 & 1.788708 & -1.299119 & 7.486550 & 1.205519 & 0.249488 & 14 & 5.000000 & regime_router & regime_R1 & R1_low_spread & CL_SPREAD \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.001241 & -0.000499 & 0.003315 & 0.527347 & -0.197308 & 1.310517 & 1.307259 & 0.197622 & 47 & 5.000000 & regime_router & regime_M1 & M1_high_rates & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.001241 & -0.000499 & 0.003315 & 0.527347 & -0.197308 & 1.310517 & 1.307259 & 0.197622 & 47 & 5.000000 & regime_router & regime_M1 & M1_high_rates & CL_SPREAD \\
+ML_ENS_vs_PASSIVE_SPREAD & 0.001624 & -0.001342 & 0.004706 & 0.956836 & -0.912522 & 3.000375 & 1.055266 & 0.298745 & 35 & 5.000000 & regime_router & regime_M1 & M1_high_rates & ML_ENS \\
+ML_LOGIT_vs_PASSIVE_SPREAD & 0.000088 & -0.002540 & 0.002857 & 0.009454 & -1.611393 & 1.678781 & 0.063925 & 0.949405 & 35 & 5.000000 & regime_router & regime_M1 & M1_high_rates & ML_LOGIT \\
+ML_RF_vs_PASSIVE_SPREAD & 0.001068 & -0.002271 & 0.004544 & 0.595097 & -1.483247 & 2.700249 & 0.614015 & 0.543292 & 35 & 5.000000 & regime_router & regime_M1 & M1_high_rates & ML_RF \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.001015 & -0.000369 & 0.002257 & 0.445971 & -1.202952 & 2.774274 & 1.519485 & 0.141706 & 25 & 5.000000 & regime_router & regime_M1 & M1_low_rates & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.001015 & -0.000369 & 0.002257 & 0.445971 & -1.202952 & 2.774274 & 1.519485 & 0.141706 & 25 & 5.000000 & regime_router & regime_M1 & M1_low_rates & CL_SPREAD \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.000040 & -0.001102 & 0.001223 & 0.451347 & -0.484709 & 1.437507 & 0.066976 & 0.947180 & 24 & 5.000000 & regime_router & regime_M1 & other & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.000040 & -0.001102 & 0.001223 & 0.451347 & -0.484709 & 1.437507 & 0.066976 & 0.947180 & 24 & 5.000000 & regime_router & regime_M1 & other & CL_SPREAD \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.000840 & -0.000700 & 0.002297 & 0.166395 & -0.588660 & 1.011924 & 1.073820 & 0.289339 & 41 & 5.000000 & regime_router & regime_C1 & C1_macro_tight_calm & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.000840 & -0.000700 & 0.002297 & 0.166395 & -0.588660 & 1.011924 & 1.073820 & 0.289339 & 41 & 5.000000 & regime_router & regime_C1 & C1_macro_tight_calm & CL_SPREAD \\
+ML_ENS_vs_PASSIVE_SPREAD & 0.001804 & -0.001245 & 0.005148 & 1.019812 & -0.862578 & 3.250965 & 1.066132 & 0.294869 & 31 & 5.000000 & regime_router & regime_C1 & C1_macro_tight_calm & ML_ENS \\
+ML_LOGIT_vs_PASSIVE_SPREAD & 0.000456 & -0.002441 & 0.003406 & 0.164385 & -1.557046 & 2.141895 & 0.299432 & 0.766675 & 31 & 5.000000 & regime_router & regime_C1 & C1_macro_tight_calm & ML_LOGIT \\
+ML_RF_vs_PASSIVE_SPREAD & 0.000977 & -0.002238 & 0.004170 & 0.500955 & -1.491617 & 2.639615 & 0.568087 & 0.574203 & 31 & 5.000000 & regime_router & regime_C1 & C1_macro_tight_calm & ML_RF \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.001015 & -0.000369 & 0.002257 & 0.445971 & -1.202952 & 2.774274 & 1.519485 & 0.141706 & 25 & 5.000000 & regime_router & regime_C1 & C1_macro_loose & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.001015 & -0.000369 & 0.002257 & 0.445971 & -1.202952 & 2.774274 & 1.519485 & 0.141706 & 25 & 5.000000 & regime_router & regime_C1 & C1_macro_loose & CL_SPREAD \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.000040 & -0.001102 & 0.001223 & 0.451347 & -0.484709 & 1.437507 & 0.066976 & 0.947180 & 24 & 5.000000 & regime_router & regime_C1 & other & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.000040 & -0.001102 & 0.001223 & 0.451347 & -0.484709 & 1.437507 & 0.066976 & 0.947180 & 24 & 5.000000 & regime_router & regime_C1 & other & CL_SPREAD \\
+CL_PANEL_vs_PASSIVE_SPREAD & 0.001646 & 0.000664 & 0.002667 & 0.739345 & 0.096502 & 2.217796 & 3.011541 & 0.004069 & 51 & 5.000000 & regime_router & ms_state_persist & MS_low & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & 0.001646 & 0.000664 & 0.002667 & 0.739345 & 0.096502 & 2.217796 & 3.011541 & 0.004069 & 51 & 5.000000 & regime_router & ms_state_persist & MS_low & CL_SPREAD \\
+ML_ENS_vs_PASSIVE_SPREAD & 0.001802 & -0.000759 & 0.004394 & 1.778384 & -2.760878 & 5.830404 & 1.267462 & 0.231164 & 12 & 5.000000 & regime_router & ms_state_persist & MS_low & ML_ENS \\
+ML_LOGIT_vs_PASSIVE_SPREAD & 0.002409 & 0.000587 & 0.004509 & 1.962613 & 0.538841 & 5.287347 & 2.329180 & 0.039927 & 12 & 5.000000 & regime_router & ms_state_persist & MS_low & ML_LOGIT \\
+ML_RF_vs_PASSIVE_SPREAD & 0.001031 & -0.003213 & 0.004926 & 0.808849 & -2.139299 & 7.678805 & 0.475710 & 0.643588 & 12 & 5.000000 & regime_router & ms_state_persist & MS_low & ML_RF \\
+CL_PANEL_vs_PASSIVE_SPREAD & -0.000611 & -0.002271 & 0.000990 & -0.658556 & -1.610310 & 0.188439 & -0.728955 & 0.469981 & 44 & 5.000000 & regime_router & ms_state_persist & MS_high & CL_PANEL \\
+CL_SPREAD_vs_PASSIVE_SPREAD & -0.000611 & -0.002271 & 0.000990 & -0.658556 & -1.610310 & 0.188439 & -0.728955 & 0.469981 & 44 & 5.000000 & regime_router & ms_state_persist & MS_high & CL_SPREAD \\
+ML_ENS_vs_PASSIVE_SPREAD & 0.000512 & -0.003730 & 0.004929 & 0.192061 & -2.147472 & 2.802941 & 0.232753 & 0.818105 & 23 & 5.000000 & regime_router & ms_state_persist & MS_high & ML_ENS \\
+ML_LOGIT_vs_PASSIVE_SPREAD & -0.001416 & -0.004990 & 0.002628 & -0.872177 & -3.392882 & 1.624612 & -0.699640 & 0.491484 & 23 & 5.000000 & regime_router & ms_state_persist & MS_high & ML_LOGIT \\
+ML_RF_vs_PASSIVE_SPREAD & -0.000013 & -0.004332 & 0.004361 & -0.086356 & -2.796890 & 2.433180 & -0.005750 & 0.995464 & 23 & 5.000000 & regime_router & ms_state_persist & MS_high & ML_RF \\
+\bottomrule
+\end{tabular}
+\end{table}

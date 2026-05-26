@@ -29,15 +29,11 @@ from src.forecasting.ns_baseline import (
 class DNSModel:
     """Fitted DNS model for one yield curve."""
     lam: float
-    # AR(1) params per factor: shape (3,) each
-    mu: np.ndarray          # long-run mean
-    phi: np.ndarray         # AR(1) coefficient
-    sigma: np.ndarray       # residual std
-    # In-sample factor series (date-indexed DataFrame with beta0/beta1/beta2)
+    mu: np.ndarray
+    phi: np.ndarray
+    sigma: np.ndarray
     factors: pd.DataFrame = field(repr=False)
-    # Original maturity columns seen during fit (for reconstruction)
     maturity_cols: List[str] = field(default_factory=list)
-    # Maturities in years corresponding to maturity_cols
     maturities: List[float] = field(default_factory=list)
     prefix: str = "RU_"
 
@@ -77,7 +73,6 @@ def fit_dns(
     yield_cols = [c for c in yields_df.columns if _parse_maturity(c) is not None]
     maturities = [_parse_maturity(c) for c in yield_cols]
 
-    # Infer prefix (RU_ or CN_) from columns
     prefix = "RU_"
     for c in yield_cols:
         if c.startswith("CN_"):
@@ -97,7 +92,6 @@ def fit_dns(
         y = factors[col].dropna().values
         if len(y) < 10:
             continue
-        # OLS: y_t = mu*(1 - phi) + phi*y_{t-1}
         y_t = y[1:]
         y_lag = y[:-1]
         X = np.column_stack([np.ones_like(y_lag), y_lag])
@@ -106,7 +100,6 @@ def fit_dns(
         except np.linalg.LinAlgError:
             continue
         intercept, phi_i = coef
-        # phi saturated at [-0.999, 0.999] for stationarity
         phi_i = float(np.clip(phi_i, -0.999, 0.999))
         mu_i = intercept / (1 - phi_i) if abs(1 - phi_i) > 1e-6 else float(np.mean(y))
         resid = y_t - (intercept + phi_i * y_lag)
@@ -172,24 +165,6 @@ def forecast_dns(
 
     result = pd.DataFrame(records).set_index('horizon')
     return result
-
-
-def run_regime_dns(yields_df: pd.DataFrame, macro_df=None) -> Optional[DNSModel]:
-    """
-    Convenience wrapper: fit DNS and print a summary.
-    macro_df is accepted for API compatibility but currently unused.
-    """
-    print("Fitting Dynamic Nelson-Siegel model...")
-    model = fit_dns(yields_df)
-    if model is None:
-        return None
-
-    print(f"  lambda = {model.lam:.3f}")
-    factor_names = ['beta0 (level)', 'beta1 (slope)', 'beta2 (curvature)']
-    for i, name in enumerate(factor_names):
-        print(f"  {name}: mu={model.mu[i]:.4f}, phi={model.phi[i]:.4f}, sigma={model.sigma[i]:.4f}")
-
-    return model
 
 
 def fit_regime_dns(

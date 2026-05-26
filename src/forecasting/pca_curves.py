@@ -29,17 +29,12 @@ except ImportError:
 class PCAModel:
     """Fitted PCA model on the joint yield matrix."""
     n_components: int
-    # sklearn PCA object
     pca: object = field(repr=False)
-    # Column metadata
     all_cols: List[str] = field(default_factory=list)
     ru_cols: List[str] = field(default_factory=list)
     cn_cols: List[str] = field(default_factory=list)
-    # In-sample PC scores (date-indexed DataFrame)
     scores: pd.DataFrame = field(repr=False, default_factory=pd.DataFrame)
-    # Explained variance ratio per component
     explained_variance_ratio: np.ndarray = field(default_factory=lambda: np.array([]))
-    # Column means used for centering
     col_means: pd.Series = field(repr=False, default_factory=pd.Series)
 
 
@@ -63,7 +58,6 @@ def fit_pca(
         print("  [PCA] scikit-learn not available.")
         return None
 
-    # Align curves on common dates
     ru = ru_yields.copy()
     cn = cn_yields.copy()
     joint = ru.join(cn, how='inner', lsuffix='', rsuffix='_cn').dropna()
@@ -72,7 +66,6 @@ def fit_pca(
         print(f"  [PCA] Insufficient aligned observations ({len(joint)}).")
         return None
 
-    # Drop all-NaN columns
     joint = joint.dropna(axis=1, how='all')
     all_cols = list(joint.columns)
     ru_cols = [c for c in all_cols if c.startswith('RU_')]
@@ -124,21 +117,19 @@ def forecast_pca(
     horizon: int = 1,
 ) -> Dict[str, pd.DataFrame]:
     """
-    Naive forecast in PC space: random walk on each PC score
-    (last observed PC score carried forward).
+    Naive forecast in PC space: random walk on each PC score.
 
     Args:
         model: Fitted PCAModel.
-        horizon: Forecast horizon (all steps return the same last-value forecast).
+        horizon: Forecast horizon.
 
     Returns:
         Dict with 'ru' and 'cn' DataFrames, each indexed by horizon (1..horizon).
     """
-    last_scores = model.scores.iloc[-1].values  # shape (n_components,)
+    last_scores = model.scores.iloc[-1].values
 
     records = []
     for h in range(1, horizon + 1):
-        # Random walk: PC scores unchanged
         approx = reconstruct_from_scores(model, last_scores.reshape(1, -1))
         approx['horizon'] = h
         records.append(approx)
@@ -149,15 +140,3 @@ def forecast_pca(
     return {'ru': ru, 'cn': cn}
 
 
-def get_factor_loadings(model: PCAModel) -> pd.DataFrame:
-    """
-    Return PC loadings (eigenvectors) as a DataFrame.
-    Rows = yield columns, columns = PC1..PCn.
-    Useful for understanding which maturities each PC represents.
-    """
-    loadings = pd.DataFrame(
-        model.pca.components_.T,
-        index=model.all_cols,
-        columns=[f'PC{i+1}' for i in range(model.n_components)],
-    )
-    return loadings

@@ -1,0 +1,47 @@
+\begin{table}
+\caption{Regime-stratified performance}
+\label{tab:7_5}
+\begin{tabular}{llllrrrrrrr}
+\toprule
+regime_id & regime_cell & strategy & benchmark & n_obs & ann_return & ann_sharpe & max_drawdown & var95_empirical & excess_ann_return_vs_benchmark & sharpe_delta_vs_benchmark \\
+\midrule
+regime_R1 & R1_high_spread & CL_PANEL & PASSIVE_SPREAD & 58 & -0.005523 & -0.538600 & -0.031100 & 0.005100 & 0.011015 & 0.120400 \\
+regime_R1 & R1_high_spread & CL_SPREAD & PASSIVE_SPREAD & 58 & -0.005523 & -0.538600 & -0.031100 & 0.005100 & 0.011015 & 0.120400 \\
+regime_R1 & R1_high_spread & ML_ENS & PASSIVE_SPREAD & 58 & 0.002514 & 0.146300 & -0.035300 & 0.009300 & 0.019487 & 0.956800 \\
+regime_R1 & R1_high_spread & ML_LOGIT & PASSIVE_SPREAD & 58 & -0.015913 & -0.801100 & -0.059300 & 0.011300 & 0.001060 & 0.009400 \\
+regime_R1 & R1_high_spread & ML_RF & PASSIVE_SPREAD & 58 & -0.004160 & -0.215400 & -0.050300 & 0.009300 & 0.012813 & 0.595100 \\
+regime_R1 & other & CL_PANEL & PASSIVE_SPREAD & 24 & 0.000991 & 0.495700 & -0.001800 & 0.000300 & 0.000479 & 0.451400 \\
+regime_R1 & other & CL_SPREAD & PASSIVE_SPREAD & 24 & 0.000991 & 0.495700 & -0.001800 & 0.000300 & 0.000479 & 0.451400 \\
+regime_R1 & R1_low_spread & CL_PANEL & PASSIVE_SPREAD & 14 & 0.002179 & 0.632700 & -0.002500 & 0.001100 & 0.014401 & 1.788700 \\
+regime_R1 & R1_low_spread & CL_SPREAD & PASSIVE_SPREAD & 14 & 0.002179 & 0.632700 & -0.002500 & 0.001100 & 0.014401 & 1.788700 \\
+regime_M1 & M1_high_rates & CL_PANEL & PASSIVE_SPREAD & 47 & -0.000234 & -0.027600 & -0.023800 & 0.004100 & 0.014887 & 0.527300 \\
+regime_M1 & M1_high_rates & CL_SPREAD & PASSIVE_SPREAD & 47 & -0.000234 & -0.027600 & -0.023800 & 0.004100 & 0.014887 & 0.527300 \\
+regime_M1 & M1_high_rates & ML_ENS & PASSIVE_SPREAD & 47 & 0.002514 & 0.146300 & -0.035300 & 0.009300 & 0.019487 & 0.956800 \\
+regime_M1 & M1_high_rates & ML_LOGIT & PASSIVE_SPREAD & 47 & -0.015913 & -0.801100 & -0.059300 & 0.011300 & 0.001060 & 0.009400 \\
+regime_M1 & M1_high_rates & ML_RF & PASSIVE_SPREAD & 47 & -0.004160 & -0.215400 & -0.050300 & 0.009300 & 0.012813 & 0.595100 \\
+regime_M1 & M1_low_rates & CL_PANEL & PASSIVE_SPREAD & 25 & -0.004602 & -0.915700 & -0.012300 & 0.003000 & 0.012183 & 0.446000 \\
+regime_M1 & M1_low_rates & CL_SPREAD & PASSIVE_SPREAD & 25 & -0.004602 & -0.915700 & -0.012300 & 0.003000 & 0.012183 & 0.446000 \\
+regime_M1 & other & CL_PANEL & PASSIVE_SPREAD & 24 & 0.000991 & 0.495700 & -0.001800 & 0.000300 & 0.000479 & 0.451400 \\
+regime_M1 & other & CL_SPREAD & PASSIVE_SPREAD & 24 & 0.000991 & 0.495700 & -0.001800 & 0.000300 & 0.000479 & 0.451400 \\
+regime_C1 & C1_macro_tight_calm & CL_PANEL & PASSIVE_SPREAD & 41 & -0.003570 & -0.444300 & -0.025200 & 0.004200 & 0.010081 & 0.166400 \\
+regime_C1 & C1_macro_tight_calm & CL_SPREAD & PASSIVE_SPREAD & 41 & -0.003570 & -0.444300 & -0.025200 & 0.004200 & 0.010081 & 0.166400 \\
+regime_C1 & C1_macro_tight_calm & ML_ENS & PASSIVE_SPREAD & 41 & 0.000694 & 0.038500 & -0.035300 & 0.010100 & 0.021651 & 1.019800 \\
+regime_C1 & C1_macro_tight_calm & ML_LOGIT & PASSIVE_SPREAD & 41 & -0.015486 & -0.816900 & -0.052100 & 0.011000 & 0.005471 & 0.164400 \\
+regime_C1 & C1_macro_tight_calm & ML_RF & PASSIVE_SPREAD & 41 & -0.009232 & -0.480400 & -0.062500 & 0.011500 & 0.011725 & 0.500900 \\
+regime_C1 & C1_macro_loose & CL_PANEL & PASSIVE_SPREAD & 25 & -0.004602 & -0.915700 & -0.012300 & 0.003000 & 0.012183 & 0.446000 \\
+regime_C1 & C1_macro_loose & CL_SPREAD & PASSIVE_SPREAD & 25 & -0.004602 & -0.915700 & -0.012300 & 0.003000 & 0.012183 & 0.446000 \\
+regime_C1 & other & CL_PANEL & PASSIVE_SPREAD & 24 & 0.000991 & 0.495700 & -0.001800 & 0.000300 & 0.000479 & 0.451400 \\
+regime_C1 & other & CL_SPREAD & PASSIVE_SPREAD & 24 & 0.000991 & 0.495700 & -0.001800 & 0.000300 & 0.000479 & 0.451400 \\
+ms_state_persist & MS_low & CL_PANEL & PASSIVE_SPREAD & 51 & -0.004344 & -0.548500 & -0.027700 & 0.002800 & 0.019749 & 0.739400 \\
+ms_state_persist & MS_low & CL_SPREAD & PASSIVE_SPREAD & 51 & -0.004344 & -0.548500 & -0.027700 & 0.002800 & 0.019749 & 0.739400 \\
+ms_state_persist & MS_low & ML_ENS & PASSIVE_SPREAD & 51 & 0.002111 & 0.567100 & -0.000900 & 0.000500 & 0.021620 & 1.778400 \\
+ms_state_persist & MS_low & ML_LOGIT & PASSIVE_SPREAD & 51 & 0.009399 & 0.751300 & -0.009900 & 0.004900 & 0.028908 & 1.962600 \\
+ms_state_persist & MS_low & ML_RF & PASSIVE_SPREAD & 51 & -0.007135 & -0.402400 & -0.024800 & 0.009200 & 0.012374 & 0.808900 \\
+ms_state_persist & MS_high & CL_PANEL & PASSIVE_SPREAD & 44 & -0.004684 & -0.541000 & -0.027200 & 0.006000 & -0.007338 & -0.658500 \\
+ms_state_persist & MS_high & CL_SPREAD & PASSIVE_SPREAD & 44 & -0.004684 & -0.541000 & -0.027200 & 0.006000 & -0.007338 & -0.658500 \\
+ms_state_persist & MS_high & ML_ENS & PASSIVE_SPREAD & 44 & -0.009763 & -0.487500 & -0.042800 & 0.011600 & 0.006147 & 0.192000 \\
+ms_state_persist & MS_high & ML_LOGIT & PASSIVE_SPREAD & 44 & -0.032900 & -1.551700 & -0.062600 & 0.011900 & -0.016990 & -0.872200 \\
+ms_state_persist & MS_high & ML_RF & PASSIVE_SPREAD & 44 & -0.016071 & -0.765900 & -0.051700 & 0.011600 & -0.000161 & -0.086400 \\
+\bottomrule
+\end{tabular}
+\end{table}

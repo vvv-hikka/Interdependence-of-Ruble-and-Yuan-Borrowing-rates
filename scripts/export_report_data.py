@@ -575,6 +575,7 @@ def run_portfolio_backtest_export():
         print(proc.stderr or proc.stdout)
         return
     print("Exported portfolio summary to data/processed/portfolio_backtest_summary.csv")
+    print("Exported portfolio monthly returns/inference to data/processed/portfolio_backtest_*.csv")
 
 
 def run_advanced_comparison_export():
@@ -625,6 +626,165 @@ def run_ml_signals_export():
         print(proc.stderr or proc.stdout)
         return
     print("Exported ML backtest summary to data/processed/ml_backtest_summary.csv")
+    print("Exported ML monthly returns/inference to data/processed/ml_backtest_*.csv")
+    print("Exported ML stability diagnostics to data/processed/ml_backtest_stability.csv")
+
+
+def run_regime_evaluation_export():
+    """
+    Run regime labels and regime-stratified backtests.
+    """
+    lbl_cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "run_regime_labels.py"),
+    ]
+    print("\nRunning regime label export...")
+    proc = subprocess.run(lbl_cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    if proc.returncode != 0:
+        print("Regime label export failed:")
+        print(proc.stderr or proc.stdout)
+        return
+    print("Exported regime labels/counts to data/processed/regime_*.csv")
+
+    bt_cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "run_regime_backtest.py"),
+    ]
+    print("Running regime backtest export...")
+    proc = subprocess.run(bt_cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    if proc.returncode != 0:
+        print("Regime backtest export failed:")
+        print(proc.stderr or proc.stdout)
+        return
+    print("Exported regime backtest artifacts to data/processed/regime_backtest_*.csv")
+
+
+def run_unified_backtest_export():
+    """
+    Merge classical and ML backtest artifacts into unified comparison files.
+    """
+    cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "run_unified_backtest.py"),
+    ]
+    print("\nRunning unified backtest artifact export...")
+    proc = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    if proc.returncode != 0:
+        print("Unified backtest export failed:")
+        print(proc.stderr or proc.stdout)
+        return
+    print("Exported unified backtest artifacts to data/processed/unified_backtest_*.csv")
+
+
+def export_financial_gain_tables():
+    """
+    Export unified strategy-performance, cost/turnover, and significance tables.
+    """
+    import pandas as pd
+
+    perf_path = PROJECT_ROOT / "data" / "processed" / "unified_backtest_summary.csv"
+    inf_path = PROJECT_ROOT / "data" / "processed" / "unified_backtest_inference.csv"
+    if not perf_path.exists():
+        print("Financial gain table export skipped: unified_backtest_summary.csv missing.")
+        return
+
+    perf = pd.read_csv(perf_path)
+    cols_perf = [c for c in [
+        "strategy", "benchmark", "ann_return", "ann_vol", "ann_sharpe", "ann_sortino",
+        "cagr", "total_return", "max_drawdown", "var95_empirical",
+        "excess_ann_return_vs_benchmark", "sharpe_delta_vs_benchmark",
+    ] if c in perf.columns]
+    if cols_perf:
+        p1 = perf[cols_perf].copy()
+        (TABLES_DIR / "tab_7_1_strategy_performance.tex").write_text(
+            p1.to_latex(index=False, float_format="%.4f", caption="Unified strategy performance", label="tab:7_1"),
+            encoding="utf-8",
+        )
+        print("Exported tab_7_1_strategy_performance.tex")
+
+    cols_cost = [c for c in [
+        "strategy", "avg_turnover", "ann_turnover", "total_cost_drag", "active_pct"
+    ] if c in perf.columns]
+    if cols_cost:
+        p2 = perf[cols_cost].copy()
+        (TABLES_DIR / "tab_7_2_cost_and_turnover.tex").write_text(
+            p2.to_latex(index=False, float_format="%.6f", caption="Turnover and transaction-cost impact", label="tab:7_2"),
+            encoding="utf-8",
+        )
+        print("Exported tab_7_2_cost_and_turnover.tex")
+
+    if inf_path.exists():
+        inf = pd.read_csv(inf_path)
+        (TABLES_DIR / "tab_7_3_significance_tests.tex").write_text(
+            inf.to_latex(index=False, float_format="%.6f", caption="Strategy significance tests", label="tab:7_3"),
+            encoding="utf-8",
+        )
+        print("Exported tab_7_3_significance_tests.tex")
+
+    regime_counts_path = PROJECT_ROOT / "data" / "processed" / "regime_counts.csv"
+    if regime_counts_path.exists():
+        regime_counts = pd.read_csv(regime_counts_path)
+        (TABLES_DIR / "tab_7_4_regime_counts.tex").write_text(
+            regime_counts.to_latex(index=False, caption="Regime sample counts", label="tab:7_4"),
+            encoding="utf-8",
+        )
+        print("Exported tab_7_4_regime_counts.tex")
+
+    regime_perf_path = PROJECT_ROOT / "data" / "processed" / "regime_backtest_summary.csv"
+    if regime_perf_path.exists():
+        regime_perf = pd.read_csv(regime_perf_path)
+        keep = [c for c in [
+            "regime_id", "regime_cell", "strategy", "benchmark", "n_obs",
+            "ann_return", "ann_sharpe", "max_drawdown", "var95_empirical",
+            "excess_ann_return_vs_benchmark", "sharpe_delta_vs_benchmark",
+        ] if c in regime_perf.columns]
+        if keep:
+            (TABLES_DIR / "tab_7_5_regime_performance.tex").write_text(
+                regime_perf[keep].to_latex(index=False, float_format="%.6f", caption="Regime-stratified performance", label="tab:7_5"),
+                encoding="utf-8",
+            )
+            print("Exported tab_7_5_regime_performance.tex")
+
+    regime_inf_path = PROJECT_ROOT / "data" / "processed" / "regime_backtest_inference.csv"
+    if regime_inf_path.exists():
+        regime_inf = pd.read_csv(regime_inf_path)
+        (TABLES_DIR / "tab_7_6_regime_significance.tex").write_text(
+            regime_inf.to_latex(index=False, float_format="%.6f", caption="Regime strategy significance tests", label="tab:7_6"),
+            encoding="utf-8",
+        )
+        print("Exported tab_7_6_regime_significance.tex")
+
+    router_path = PROJECT_ROOT / "data" / "processed" / "regime_router_decisions.csv"
+    if router_path.exists():
+        router = pd.read_csv(router_path)
+        keep = [c for c in [
+            "regime_id", "regime_cell", "selected_model", "router_score",
+            "confidence", "expected_net_edge", "reason_code", "no_trade", "n_obs"
+        ] if c in router.columns]
+        if keep:
+            (TABLES_DIR / "tab_7_7_router_decisions.tex").write_text(
+                router[keep].to_latex(index=False, float_format="%.6f", caption="Router decisions with confidence and expected edge", label="tab:7_7"),
+                encoding="utf-8",
+            )
+            print("Exported tab_7_7_router_decisions.tex")
+
+    ml_rel = PROJECT_ROOT / "data" / "processed" / "ml_signals_reliability.csv"
+    if ml_rel.exists():
+        rel = pd.read_csv(ml_rel)
+        (TABLES_DIR / "tab_7_8_ml_reliability.tex").write_text(
+            rel.to_latex(index=False, float_format="%.6f", caption="ML probability reliability bins", label="tab:7_8"),
+            encoding="utf-8",
+        )
+        print("Exported tab_7_8_ml_reliability.tex")
+
+    ml_st = PROJECT_ROOT / "data" / "processed" / "ml_backtest_stability.csv"
+    if ml_st.exists():
+        st = pd.read_csv(ml_st)
+        (TABLES_DIR / "tab_7_9_ml_stability.tex").write_text(
+            st.to_latex(index=False, float_format="%.6f", caption="ML stability under threshold/cost perturbations", label="tab:7_9"),
+            encoding="utf-8",
+        )
+        print("Exported tab_7_9_ml_stability.tex")
 
 
 def main():
@@ -651,6 +811,16 @@ def main():
         action="store_true",
         help="Also run ML signal + ML backtest exports",
     )
+    parser.add_argument(
+        "--with-financial-gains",
+        action="store_true",
+        help="Also export unified financial-gain comparison tables",
+    )
+    parser.add_argument(
+        "--with-regime-eval",
+        action="store_true",
+        help="Also run regime labeling/backtests and regime report tables",
+    )
     args = parser.parse_args()
 
     print("Exporting report tables...")
@@ -664,6 +834,25 @@ def main():
         run_advanced_comparison_export()
     if args.with_ml_signals:
         run_ml_signals_export()
+    if args.with_regime_eval:
+        run_regime_evaluation_export()
+    if args.with_ml_signals or args.with_portfolio_backtest:
+        run_unified_backtest_export()
+    if args.with_financial_gains:
+        export_financial_gain_tables()
+    # Regression guard for notebook compatibility.
+    schema_cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "check_artifact_schema.py"),
+        "--processed-dir",
+        str(PROJECT_ROOT / "data" / "processed"),
+    ]
+    proc = subprocess.run(schema_cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    if proc.returncode != 0:
+        print("Schema check warning:")
+        print(proc.stderr or proc.stdout)
+    else:
+        print("Schema check passed.")
     print("\nGenerating figures...")
     run_figures()
     print("\nDone. Tables in project report/tables/, figures in project report/graphics/")

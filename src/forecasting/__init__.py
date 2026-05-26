@@ -5,7 +5,6 @@ Yield curve forecasting package.
 from src.forecasting.loaders import (
     load_russian_yield_curve,
     load_chinese_yield_curve,
-    load_global_indicators,
     load_macro_indicators,
     load_russian_yield_curve_weekly,
     load_chinese_yield_curve_weekly,
@@ -16,16 +15,27 @@ from src.forecasting.ns_baseline import fit_nelson_siegel, compute_residuals, ge
 from src.forecasting.cross_currency import build_spreads, flag_abnormal_spreads
 from src.forecasting.evaluate import evaluate_ns_fit, evaluate_spreads
 from src.forecasting.portfolio import (
-    compute_signal_score,
     signal_to_weights,
-    portfolio_var_95,
-    apply_var_limit,
+)
+from src.forecasting.backtest_metrics import (
+    compute_proxy_returns,
+    align_signal_to_next_return,
+    compute_turnover,
+    apply_transaction_costs,
+    summarize_series,
+    to_stats_row,
+    bootstrap_mean_diff_ci,
+    bootstrap_sharpe_diff_ci,
+    paired_ttest,
+)
+from src.forecasting.regime_labels import (
+    build_regime_frame,
+    regime_counts_table,
 )
 
 __all__ = [
     "load_russian_yield_curve",
     "load_chinese_yield_curve",
-    "load_global_indicators",
     "load_macro_indicators",
     "load_russian_yield_curve_weekly",
     "load_chinese_yield_curve_weekly",
@@ -37,8 +47,16 @@ __all__ = [
     "flag_abnormal_spreads",
     "evaluate_ns_fit",
     "evaluate_spreads",
-    "compute_signal_score",
     "signal_to_weights",
-    "portfolio_var_95",
-    "apply_var_limit",
+    "compute_proxy_returns",
+    "align_signal_to_next_return",
+    "compute_turnover",
+    "apply_transaction_costs",
+    "summarize_series",
+    "to_stats_row",
+    "bootstrap_mean_diff_ci",
+    "bootstrap_sharpe_diff_ci",
+    "paired_ttest",
+    "build_regime_frame",
+    "regime_counts_table",
 ]

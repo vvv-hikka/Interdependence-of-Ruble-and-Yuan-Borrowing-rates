@@ -1,13 +1,10 @@
-"""
-Database module for storing and managing financial data
-========================================================
-"""
+"""Database module for storing and managing financial data."""
 
 import sqlite3
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Any
+from typing import List
 
 try:
     from config import DB_PATH, DB_TABLES, BASE_TABLES_FOR_COMBINED_VIEW, WEEKLY_BASE_TABLES
@@ -38,7 +35,6 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Create metadata table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS _metadata (
                 table_name TEXT PRIMARY KEY,
@@ -49,7 +45,6 @@ class DatabaseManager:
             )
         """)
         
-        # Create data update log
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS _update_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,10 +60,6 @@ class DatabaseManager:
     def get_connection(self) -> sqlite3.Connection:
         """Get database connection."""
         return sqlite3.connect(self.db_path)
-    
-    # =========================================================================
-    # TABLE OPERATIONS
-    # =========================================================================
     
     def save_dataframe(self, df: pd.DataFrame, table_name: str,
                        description: str = "", source: str = "",
@@ -95,10 +86,8 @@ class DatabaseManager:
         try:
             conn = self.get_connection()
             
-            # Save DataFrame
             df.to_sql(table_name, conn, if_exists=if_exists, index=False)
             
-            # Update metadata
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT OR REPLACE INTO _metadata 
@@ -106,7 +95,6 @@ class DatabaseManager:
                 VALUES (?, ?, ?, ?, ?)
             """, (table_name, description, source, frequency, datetime.now().isoformat()))
             
-            # Log update
             cursor.execute("""
                 INSERT INTO _update_log (table_name, rows_added, update_time)
                 VALUES (?, ?, ?)
@@ -129,7 +117,6 @@ class DatabaseManager:
             df = pd.read_sql(f"SELECT * FROM {table_name}", conn)
             conn.close()
             
-            # Convert date column if present
             if 'date' in df.columns:
                 df['date'] = pd.to_datetime(df['date'])
             
@@ -177,10 +164,6 @@ class DatabaseManager:
             print(f"  [ERROR] Error dropping {table_name}: {e}")
             return False
     
-    # =========================================================================
-    # COMBINED DATA VIEWS
-    # =========================================================================
-    
     def create_combined_monthly_view(self) -> pd.DataFrame:
         """
         Create a combined view of all monthly data from base tables only.
@@ -188,14 +171,11 @@ class DatabaseManager:
         """
         print("\nCreating combined monthly view...")
         
-        # Drop existing combined view so we rebuild from base tables only
         self.drop_table('combined_monthly')
         
-        # Use only base tables (exclude derived/view tables like combined_monthly)
         all_tables = self.list_tables()
         tables = [t for t in all_tables if t in BASE_TABLES_FOR_COMBINED_VIEW and not t.startswith('_')]
         
-        # Start with date range
         combined = None
         
         for table in tables:
@@ -203,7 +183,6 @@ class DatabaseManager:
             if df.empty or 'date' not in df.columns:
                 continue
             
-            # Rename columns to avoid conflicts (prefix with table name)
             cols_to_rename = {col: f"{table}_{col}" for col in df.columns if col != 'date'}
             df = df.rename(columns=cols_to_rename)
             
@@ -215,7 +194,6 @@ class DatabaseManager:
         if combined is not None:
             combined = combined.sort_values('date')
             
-            # Save combined view
             self.save_dataframe(
                 combined, 
                 'combined_monthly',
@@ -255,10 +233,6 @@ class DatabaseManager:
             return combined
         return pd.DataFrame()
 
-    # =========================================================================
-    # DATA SUMMARY
-    # =========================================================================
-    
     def print_summary(self):
         """Print database summary."""
         print("\n" + "="*70)
@@ -278,7 +252,6 @@ class DatabaseManager:
             print(f"  Description: {row.get('description', 'N/A')}")
             print(f"  Source: {row.get('source', 'N/A')}")
             print(f"  Rows: {len(df)}")
-            # Safely print columns (handle non-ASCII)
             cols_safe = [str(c).encode('ascii', 'replace').decode() for c in df.columns]
             print(f"  Columns ({len(df.columns)}): {cols_safe[:10]}{'...' if len(df.columns) > 10 else ''}")
             print(f"  Last updated: {row.get('last_updated', 'N/A')}")
@@ -288,53 +261,3 @@ class DatabaseManager:
         
         print("\n" + "="*70)
 
-
-# Convenience functions
-def get_db() -> DatabaseManager:
-    """Get database manager instance."""
-    return DatabaseManager()
-
-
-def query_db(sql: str) -> pd.DataFrame:
-    """Quick query function."""
-    return get_db().query(sql)
-
-
-def save_to_db(df: pd.DataFrame, table_name: str, **kwargs) -> bool:
-    """Quick save function."""
-    return get_db().save_dataframe(df, table_name, **kwargs)
-
-
-def load_from_db(table_name: str) -> pd.DataFrame:
-    """Quick load function."""
-    return get_db().load_dataframe(table_name)
-
-
-# Test function
-def test_database():
-    """Test database functionality."""
-    db = DatabaseManager()
-    
-    # Test save
-    test_df = pd.DataFrame({
-        'date': pd.date_range('2024-01-01', periods=5, freq='ME'),
-        'value': [1, 2, 3, 4, 5]
-    })
-    
-    db.save_dataframe(test_df, 'test_table', 
-                      description='Test table',
-                      source='Test')
-    
-    # Test load
-    loaded = db.load_dataframe('test_table')
-    print(f"Loaded {len(loaded)} rows")
-    
-    # Test summary
-    db.print_summary()
-    
-    # Cleanup
-    db.drop_table('test_table')
-
-
-if __name__ == "__main__":
-    test_database()

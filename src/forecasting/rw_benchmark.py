@@ -9,7 +9,7 @@ any model that cannot beat it should not be used in practice.
 from __future__ import annotations
 
 import pandas as pd
-from typing import Dict, Optional
+from typing import Optional
 
 
 def forecast_random_walk(
@@ -41,18 +41,3 @@ def forecast_random_walk(
     return pd.DataFrame(records).set_index('horizon')
 
 
-def forecast_random_walk_both(
-    ru_yields: pd.DataFrame,
-    cn_yields: pd.DataFrame,
-    horizon: int = 1,
-) -> Dict[str, pd.DataFrame]:
-    """
-    Random walk forecast for both RU and CN yield curves.
-
-    Returns:
-        Dict with keys 'ru' and 'cn'.
-    """
-    return {
-        'ru': forecast_random_walk(ru_yields, horizon),
-        'cn': forecast_random_walk(cn_yields, horizon),
-    }
